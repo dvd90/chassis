@@ -42,6 +42,8 @@ cd my-api && npm install && npm run dev
 
 That's it — no database, no env file, no accounts needed. Open http://localhost:8000/status.
 
+New here? Follow the **[step-by-step getting-started guide](docs/getting-started.md)** — zero to a tested API in ~10 minutes.
+
 ## Features
 
 - **TypeScript 5 + Express 5** — strict types, async errors caught automatically
@@ -57,6 +59,19 @@ That's it — no database, no env file, no accounts needed. Open http://localhos
 - **Code generator** — `npm run gen user` scaffolds a controller + test, wired up
 - **Production Docker** — multi-stage build, non-root user, plus docker-compose with Mongo for dev
 - **CI + Renovate** — GitHub Actions verify pipeline and automated dependency updates
+- **AI-agent ready** — ships `AGENTS.md`, `CLAUDE.md`, `llms.txt`, and an `add-resource` skill so agents write code that matches the conventions (see below)
+
+## AI-agent ready
+
+Most people scaffolding a backend today have an AI agent in the loop. Chassis is built so that agent-written code reads like hand-written code — because the framework gives agents rails and a verifiable finish line:
+
+- **`AGENTS.md` + `CLAUDE.md`** ship in every project — Claude Code, Cursor, Copilot, and Codex pick them up automatically and follow the conventions (thin controllers, `resHandler` responses, `throw AppError`, config in one place).
+- **One obvious place for everything** means agent output converges on the same shape a maintainer would write — that's what keeps it readable.
+- **`npm run verify`** (strict TypeScript + ESLint + tests) is a deterministic quality gate agents iterate against until green.
+- **`.claude/skills/add-resource`** turns "add a books resource" into one consistent, checklisted operation.
+- **`llms.txt`** gives doc-fetching tools a compact map of the conventions.
+
+Nothing to install — it's all in the scaffold. See [AGENTS.md](AGENTS.md).
 
 ## Scripts
 
@@ -95,7 +110,15 @@ src/
 └── server.ts        # boot: integrations → listen → graceful shutdown
 ```
 
-Read more in [docs/architecture.md](docs/architecture.md) and [docs/modules.md](docs/modules.md).
+## Documentation
+
+Full docs live in [`docs/`](docs/README.md):
+
+- **[Getting started](docs/getting-started.md)** — step-by-step tutorial
+- **Guides** — [building an API](docs/guides/building-an-api.md) · [authentication](docs/guides/authentication.md) · [deployment](docs/guides/deployment.md)
+- **Concepts** — [architecture](docs/architecture.md) · [modules & integrations](docs/modules.md)
+- **Reference** — [configuration](docs/reference/configuration.md) · [core API](docs/reference/core-api.md) · [CLI & scripts](docs/reference/cli.md)
+- **[Maintainers guide](docs/maintainers.md)** — publishing, releases, keeping the template fresh
 
 ## Docker
 

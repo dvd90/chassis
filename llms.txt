@@ -1,0 +1,37 @@
+# Chassis
+
+> A lightweight, decorator-driven Express + TypeScript backend starter.
+> Controllers are classes with `@route`-decorated methods; exported
+> controllers auto-mount; responses go through `req.resHandler`; errors
+> are thrown as `AppError`; config is one validated zod schema.
+> Integrations (MongoDB, Auth0, Sentry) are opt-in via environment
+> variables. `npm run verify` (typecheck + lint + test) is the quality
+> gate.
+
+## Conventions for code generation
+
+- Add an endpoint: `npm run gen <Name>`, then edit the controller methods.
+- Endpoints: methods on a class extending `Routable`, decorated with
+  `@route('get'|'post'|..., '/path', [middlewares])`. Export the class
+  from `src/controllers/index.ts` to register it.
+- Responses: `req.resHandler.ok(data)`, `.created(data)`, `.noContent()`,
+  `.notFound(msg)`, `.conflict(msg)`, `.validation(issues)`. Never call
+  `res.status().json()`.
+- Errors: `throw new AppError(ERROR_CODES.NOT_FOUND, 'message')`. No
+  try/catch in controllers — Express 5 + a central handler catch throws.
+- Validation: `validate({ body: zodSchema })` in the route middleware
+  array. Parsed body replaces `req.body`.
+- Config: only `src/config/index.ts` reads `process.env`; it's a zod
+  schema and the app exits on invalid config.
+- Never edit `src/core/**` for feature work.
+
+## Docs
+
+- [Agent guide](AGENTS.md): conventions, do/don't, definition of done
+- [Getting started](docs/getting-started.md): scaffold to running API
+- [Building an API](docs/guides/building-an-api.md): a full CRUD resource
+- [Authentication](docs/guides/authentication.md): Auth0 and custom providers
+- [Core API reference](docs/reference/core-api.md): decorators, resHandler, AppError, validate
+- [Configuration](docs/reference/configuration.md): every env var
+- [Architecture](docs/architecture.md): request lifecycle, decorator flow
+- [Modules](docs/modules.md): the opt-in integration contract

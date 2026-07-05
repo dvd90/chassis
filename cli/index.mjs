@@ -244,10 +244,11 @@ console.log(
     ? `${green('✔')} Modules: ${enabled.join(', ')} ${dim('(enable via .env — see .env.example)')}`
     : `${green('✔')} Standalone build — no external services required`
 );
+console.log(
+  `${green('✔')} AI-agent ready ${dim('(AGENTS.md, CLAUDE.md, llms.txt, add-resource skill)')}`
+);
 console.log(`\nNext steps:\n`);
 console.log(`  cd ${path.relative(process.cwd(), targetDir) || '.'}`);
 if (!withInstall) console.log('  npm install');
 console.log('  npm run dev');
-console.log(
-  `\n${dim('Docs: README.md · docs/architecture.md · docs/modules.md')}\n`
-);
+console.log(`\n${dim('Docs: README.md · AGENTS.md · docs/README.md')}\n`);
