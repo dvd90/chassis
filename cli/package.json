@@ -4,7 +4,7 @@
   "description": "Scaffold a Chassis backend — a lightweight, decorator-driven Express + TypeScript starter. Pick your modules, start coding.",
   "type": "module",
   "bin": {
-    "create-chassis": "./index.mjs"
+    "create-chassis": "index.mjs"
   },
   "files": ["index.mjs"],
   "engines": {
