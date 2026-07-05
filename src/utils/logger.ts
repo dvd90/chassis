@@ -1,62 +1,23 @@
-import chalk from 'chalk';
-import * as Sentry from '@sentry/node';
-import { LeanRequest } from './interfaces';
+import winston from 'winston';
+import { config } from '../config';
 
-// region ERROR JSON handling
-// this will define a proper toJSON function on the standard Error object prototype
-// and thus will allow it to be JSON.stringify-ed properly
-if (!('toJSON' in Error.prototype))
-  Object.defineProperty(Error.prototype, 'toJSON', {
-    value: function () {
-      const alt = {};
+const devFormat = winston.format.combine(
+  winston.format.colorize(),
+  winston.format.timestamp({ format: 'HH:mm:ss' }),
+  winston.format.printf(({ timestamp, level, message, ...meta }) => {
+    const extras = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+    return `${timestamp} ${level} ${message}${extras}`;
+  })
+);
 
-      Object.getOwnPropertyNames(this).forEach(function (key) {
-        alt[key] = this[key];
-      }, this);
+const prodFormat = winston.format.combine(
+  winston.format.timestamp(),
+  winston.format.json()
+);
 
-      return alt;
-    },
-    configurable: true,
-    writable: true
-  });
-// endregion ERROR JSON handling
-
-export const { log, error } = console;
-
-export function logDanger(content: string): void {
-  log(chalk.red.bold(content));
-}
-
-export function logWarning(content: string): void {
-  log(chalk.yellow.bold(content));
-}
-
-export function logSuccess(content: string): void {
-  log(chalk.green.bold(content));
-}
-
-export function logPrimary(content: string): void {
-  log(chalk.blue.bold(content));
-}
-
-export function logConsole(content: unknown): void {
-  log(content);
-}
-
-export function sentryErrLog(
-  err: Error,
-  title?: string, // TODO: title ignored, maybe send it to sentry as well
-  user?: unknown,
-  request?: LeanRequest
-): void {
-  Sentry.captureException(err, { extra: { request }, user });
-
-  if (request) error(new Date().toISOString() + ': ', err, request);
-  else error(new Date().toISOString() + ': ', err);
-}
-
-export function sentryMessageHandler(context: string, data: unknown): void {
-  const additionalInfo = data ? ' : ' + JSON.stringify(data) : '';
-
-  Sentry.captureMessage(context + additionalInfo);
-}
+export const logger = winston.createLogger({
+  silent: config.env === 'test',
+  level: 'info',
+  format: config.env === 'production' ? prodFormat : devFormat,
+  transports: [new winston.transports.Console()]
+});

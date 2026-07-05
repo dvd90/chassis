@@ -1,16 +1,21 @@
 {
   "compilerOptions": {
-    "outDir": "./build",
-    "allowJs": false,
-    "target": "es6",
-    "sourceMap": true,
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "target": "ES2022",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"],
+    "outDir": "dist",
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true,
-    "esModuleInterop": true
+    "sourceMap": true,
+    "declaration": false,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
   },
-  "include": ["./src/**/*.ts"],
-  "exclude": ["node_modules"],
-  "typeRoots": ["node_modules/@types"]
+  "include": ["src"]
 }
