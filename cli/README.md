@@ -1,6 +1,6 @@
 # create-chassis
 
-Scaffold a [Chassis](https://github.com/dvd90/node-ts-express-bp) backend —
+Scaffold a [Chassis](https://github.com/dvd90/chassis) backend —
 a lightweight, decorator-driven Express + TypeScript starter.
 
 ```bash
@@ -19,5 +19,5 @@ Flags:
 For development of the CLI itself, point it at a local template checkout:
 
 ```bash
-CHASSIS_TEMPLATE=/path/to/node-ts-express-bp node index.mjs /tmp/test-app --yes
+CHASSIS_TEMPLATE=/path/to/chassis node index.mjs /tmp/test-app --yes
 ```

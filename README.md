@@ -36,7 +36,7 @@ npm create chassis my-api -- --bare   # minimal build: no integrations, no Docke
 Or use the template directly:
 
 ```bash
-git clone https://github.com/dvd90/node-ts-express-bp.git my-api
+git clone https://github.com/dvd90/chassis.git my-api
 cd my-api && npm install && npm run dev
 ```
 

@@ -19,7 +19,7 @@ import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import readline from 'node:readline/promises';
 
-const REPO = 'dvd90/node-ts-express-bp';
+const REPO = 'dvd90/chassis';
 const TARBALL_URL = `https://codeload.github.com/${REPO}/tar.gz/HEAD`;
 
 const MODULES = {
