@@ -1,0 +1,21 @@
+services:
+  api:
+    build: .
+    ports:
+      - '8000:8000'
+    environment:
+      NODE_ENV: production
+      PORT: 8000
+      MONGODB_URI: mongodb://mongo:27017/chassis # chassis:mongo
+    depends_on: # chassis:mongo
+      - mongo # chassis:mongo
+
+  mongo: # chassis:mongo
+    image: mongo:7 # chassis:mongo
+    ports: # chassis:mongo
+      - '27017:27017' # chassis:mongo
+    volumes: # chassis:mongo
+      - mongo-data:/data/db # chassis:mongo
+
+volumes: # chassis:mongo
+  mongo-data: # chassis:mongo

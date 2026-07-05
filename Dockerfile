@@ -1,23 +1,23 @@
-FROM node:14.15.4-alpine
-# Add metadata to an image
-
-ENV NPM_CONFIG_LOGLEVEL warn
-ARG NPM_TOKEN
+# ── Build stage ──────────────────────────────────────────────────────
+FROM node:22-alpine AS build
 WORKDIR /app
-RUN apk --no-cache add bash make git
-COPY ._npmrc .npmrc
+
 COPY package*.json ./
-RUN npm install --unsafe-perm && npm cache clean --force
-RUN rm -f .npmrc
-COPY . .
+RUN npm ci --ignore-scripts
 
-ARG NODE_ENV=staging
-ENV NODE_ENV=${NODE_ENV}
+COPY tsconfig*.json ./
+COPY src ./src
+RUN npm run build && npm prune --omit=dev
 
-# Build all the TypeScript
-RUN npm run run
+# ── Runtime stage ────────────────────────────────────────────────────
+FROM node:22-alpine
+ENV NODE_ENV=production
+WORKDIR /app
 
-# Remove all the needless source
-RUN rm -rf ./src
-EXPOSE 5001
-CMD ["npm", "run" ,"run"]
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+COPY package.json ./
+
+USER node
+EXPOSE 8000
+CMD ["node", "dist/server.js"]
