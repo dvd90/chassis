@@ -19,7 +19,7 @@ import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import readline from 'node:readline/promises';
 
-const REPO = 'dvd90/node-ts-express-bp';
+const REPO = 'dvd90/chassis';
 const TARBALL_URL = `https://codeload.github.com/${REPO}/tar.gz/HEAD`;
 
 const MODULES = {
@@ -50,7 +50,7 @@ const fail = (msg) => {
   process.exit(1);
 };
 
-// ── Arguments & prompts ─────────────────────────────────────────────
+// ── Arguments & prompts ─────────────────────────────────────
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith('-'));
 const flags = new Set(process.argv.slice(2).filter((a) => a.startsWith('-')));
@@ -109,7 +109,7 @@ const withInstall = await confirm('Run npm install now?', !skipPrompts);
 
 rl?.close();
 
-// ── Fetch the template ──────────────────────────────────────────────
+// ── Fetch the template ─────────────────────────────────────
 
 const IGNORE = new Set([
   'node_modules',
@@ -156,7 +156,7 @@ async function fetchTemplate(dest) {
 
 await fetchTemplate(targetDir);
 
-// ── Prune declined modules ──────────────────────────────────────────
+// ── Prune declined modules ─────────────────────────────────
 
 const declined = Object.keys(MODULES).filter((key) => !chosen[key]);
 const MARKER_LINE = /\s*(?:\/\/|#)?\s*chassis:\w+\s*$/;
@@ -214,7 +214,7 @@ delete pkg.homepage;
 pkg.author = '';
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
-// ── Finish up ───────────────────────────────────────────────────────
+// ── Finish up ──────────────────────────────────────────
 
 const run = (cmd, cmdArgs, opts = {}) =>
   spawnSync(cmd, cmdArgs, { cwd: targetDir, stdio: 'inherit', ...opts });
