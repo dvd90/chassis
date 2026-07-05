@@ -2,6 +2,8 @@
 
 **Start here:** [Getting started](getting-started.md) — from zero to a running, tested API in ~10 minutes.
 
+**Using an AI agent?** See [AGENTS.md](../AGENTS.md) — conventions, do/don't, and the definition of done that agents follow.
+
 ## Tutorials & guides
 
 | Doc                                          | What it covers                                                    |

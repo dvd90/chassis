@@ -59,6 +59,19 @@ New here? Follow the **[step-by-step getting-started guide](docs/getting-started
 - **Code generator** — `npm run gen user` scaffolds a controller + test, wired up
 - **Production Docker** — multi-stage build, non-root user, plus docker-compose with Mongo for dev
 - **CI + Renovate** — GitHub Actions verify pipeline and automated dependency updates
+- **AI-agent ready** — ships `AGENTS.md`, `CLAUDE.md`, `llms.txt`, and an `add-resource` skill so agents write code that matches the conventions (see below)
+
+## AI-agent ready
+
+Most people scaffolding a backend today have an AI agent in the loop. Chassis is built so that agent-written code reads like hand-written code — because the framework gives agents rails and a verifiable finish line:
+
+- **`AGENTS.md` + `CLAUDE.md`** ship in every project — Claude Code, Cursor, Copilot, and Codex pick them up automatically and follow the conventions (thin controllers, `resHandler` responses, `throw AppError`, config in one place).
+- **One obvious place for everything** means agent output converges on the same shape a maintainer would write — that's what keeps it readable.
+- **`npm run verify`** (strict TypeScript + ESLint + tests) is a deterministic quality gate agents iterate against until green.
+- **`.claude/skills/add-resource`** turns "add a books resource" into one consistent, checklisted operation.
+- **`llms.txt`** gives doc-fetching tools a compact map of the conventions.
+
+Nothing to install — it's all in the scaffold. See [AGENTS.md](AGENTS.md).
 
 ## Scripts
 
