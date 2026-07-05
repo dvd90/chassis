@@ -6,7 +6,9 @@
   "bin": {
     "create-chassis": "./index.mjs"
   },
-  "files": ["index.mjs"],
+  "files": [
+    "index.mjs"
+  ],
   "engines": {
     "node": ">=20"
   },
@@ -22,7 +24,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dvd90/node-ts-express-bp.git",
+    "url": "git+https://github.com/dvd90/chassis.git",
     "directory": "cli"
   },
   "author": "dvd90",
