@@ -42,6 +42,8 @@ cd my-api && npm install && npm run dev
 
 That's it — no database, no env file, no accounts needed. Open http://localhost:8000/status.
 
+New here? Follow the **[step-by-step getting-started guide](docs/getting-started.md)** — zero to a tested API in ~10 minutes.
+
 ## Features
 
 - **TypeScript 5 + Express 5** — strict types, async errors caught automatically
@@ -95,7 +97,15 @@ src/
 └── server.ts        # boot: integrations → listen → graceful shutdown
 ```
 
-Read more in [docs/architecture.md](docs/architecture.md) and [docs/modules.md](docs/modules.md).
+## Documentation
+
+Full docs live in [`docs/`](docs/README.md):
+
+- **[Getting started](docs/getting-started.md)** — step-by-step tutorial
+- **Guides** — [building an API](docs/guides/building-an-api.md) · [authentication](docs/guides/authentication.md) · [deployment](docs/guides/deployment.md)
+- **Concepts** — [architecture](docs/architecture.md) · [modules & integrations](docs/modules.md)
+- **Reference** — [configuration](docs/reference/configuration.md) · [core API](docs/reference/core-api.md) · [CLI & scripts](docs/reference/cli.md)
+- **[Maintainers guide](docs/maintainers.md)** — publishing, releases, keeping the template fresh
 
 ## Docker
 
