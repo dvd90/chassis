@@ -35,7 +35,7 @@ module for the smallest possible starting point.
 **Option B — use the template directly:**
 
 ```bash
-git clone https://github.com/dvd90/node-ts-express-bp.git my-api
+git clone https://github.com/dvd90/chassis.git my-api
 cd my-api
 rm -rf .git && git init
 npm install
