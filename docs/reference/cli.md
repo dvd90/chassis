@@ -23,6 +23,9 @@ What it does, in order:
    dependencies from `package.json`
 4. Renames the package, resets the version, git-inits (optional),
    installs (optional)
+5. **Makes the project the user's own** — rewrites the `LICENSE`
+   copyright to the new project name and current year, and removes the
+   maintainer-only `docs/maintainers.md` (plus its index links)
 
 The generated project passes `npm run verify` regardless of which
 modules were declined.
