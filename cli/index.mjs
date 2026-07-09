@@ -214,6 +214,39 @@ delete pkg.homepage;
 pkg.author = '';
 fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
+// Strip template-specific artifacts so the generated project is the
+// user's own, not a copy of Chassis:
+//   - maintainers.md documents publishing Chassis itself — irrelevant here
+//   - the LICENSE must credit the new project, not the template author
+fs.rmSync(path.join(targetDir, 'docs', 'maintainers.md'), { force: true });
+
+// Remove links to the deleted guide so the scaffold has no dead links.
+const docsIndex = path.join(targetDir, 'docs', 'README.md');
+if (fs.existsSync(docsIndex)) {
+  const patched = fs
+    .readFileSync(docsIndex, 'utf8')
+    .replace(/\n## For maintainers[\s\S]*$/, '\n');
+  fs.writeFileSync(docsIndex, patched);
+}
+const rootReadme = path.join(targetDir, 'README.md');
+if (fs.existsSync(rootReadme)) {
+  const patched = fs
+    .readFileSync(rootReadme, 'utf8')
+    .split('\n')
+    .filter((line) => !line.includes('docs/maintainers.md'))
+    .join('\n');
+  fs.writeFileSync(rootReadme, patched);
+}
+
+const licensePath = path.join(targetDir, 'LICENSE');
+if (fs.existsSync(licensePath)) {
+  const year = new Date().getFullYear();
+  const license = fs
+    .readFileSync(licensePath, 'utf8')
+    .replace(/Copyright \(c\) .*/, `Copyright (c) ${year} ${projectName}`);
+  fs.writeFileSync(licensePath, license);
+}
+
 // ── Finish up ──────────────────────────────────────────
 
 const run = (cmd, cmdArgs, opts = {}) =>

@@ -1,6 +1,6 @@
 {
   "name": "create-chassis",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Scaffold a Chassis backend — a lightweight, decorator-driven Express + TypeScript starter. Pick your modules, start coding.",
   "type": "module",
   "bin": {
