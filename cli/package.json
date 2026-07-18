@@ -1,6 +1,6 @@
 {
   "name": "create-chassis",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Scaffold a production-ready Express 5 + TypeScript backend — pick a database + ORM (Postgres/SQLite/Drizzle or Mongo/Mongoose), auth (Auth0/JWT/Clerk), Sentry, an MCP server, and x402 payments, and get a project with only what you chose. AI-agent ready.",
   "type": "module",
   "bin": {
