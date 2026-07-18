@@ -1,7 +1,7 @@
 {
   "name": "create-chassis",
   "version": "0.2.0",
-  "description": "Scaffold a Chassis backend — a lightweight, decorator-driven Express + TypeScript starter. Pick your modules, start coding.",
+  "description": "Scaffold a production-ready Express 5 + TypeScript backend — pick a database + ORM (Postgres/SQLite/Drizzle or Mongo/Mongoose), auth (Auth0/JWT/Clerk), Sentry, an MCP server, and x402 payments, and get a project with only what you chose. AI-agent ready.",
   "type": "module",
   "bin": {
     "create-chassis": "index.mjs"
@@ -15,13 +15,38 @@
   },
   "keywords": [
     "chassis",
+    "create-chassis",
     "express",
+    "express5",
     "typescript",
     "boilerplate",
     "starter",
+    "template",
     "scaffold",
+    "generator",
     "backend",
-    "api"
+    "api",
+    "rest-api",
+    "nodejs",
+    "decorators",
+    "orm",
+    "drizzle",
+    "postgres",
+    "sqlite",
+    "mongodb",
+    "mongoose",
+    "auth",
+    "jwt",
+    "auth0",
+    "clerk",
+    "sentry",
+    "mcp",
+    "model-context-protocol",
+    "x402",
+    "payments",
+    "ai-agent",
+    "agents",
+    "llm"
   ],
   "repository": {
     "type": "git",
