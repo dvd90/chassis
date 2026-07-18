@@ -1,13 +1,14 @@
 {
   "name": "create-chassis",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Scaffold a Chassis backend — a lightweight, decorator-driven Express + TypeScript starter. Pick your modules, start coding.",
   "type": "module",
   "bin": {
     "create-chassis": "index.mjs"
   },
   "files": [
-    "index.mjs"
+    "index.mjs",
+    "modules.mjs"
   ],
   "engines": {
     "node": ">=20"

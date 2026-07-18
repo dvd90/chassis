@@ -27,8 +27,13 @@ uses. Green means done; anything else means keep going.
 ## Do this
 
 - **Add an endpoint:** run `npm run gen <Name>` to scaffold a controller +
-  test, then edit the generated methods. (Or copy an existing
+  test, then edit the generated methods. It's DB-aware — it wires the
+  controller to the installed ORM (Drizzle or Mongoose) and, for Drizzle,
+  appends a table to `src/db/<engine>/schema.ts`. (Or copy an existing
   `*.controller.ts` and export it from `src/controllers/index.ts`.)
+- **Protect or charge for a route** with `@protectedRoute(...)` (auth) or
+  `@paidRoute(method, path, price)` (x402 payments). Both answer `501` until
+  their module is configured — never silently open or free.
 - **Validate input** with `validate({ body|query|params: zodSchema })` in
   the route's middleware array. Define the schema next to the controller
   or in `src/schemas`.
@@ -53,7 +58,8 @@ uses. Green means done; anything else means keep going.
 - ❌ Don't edit `src/core/**` to build a feature. That's the framework;
   features live in controllers, services, models, schemas, integrations.
 - ❌ Don't add a dependency when a listed one already covers it (zod for
-  validation, winston for logging, mongoose for Mongo).
+  validation, winston for logging, your installed ORM — Drizzle or Mongoose —
+  for data access).
 - ❌ Don't disable lint rules or loosen `tsconfig` to make `verify` pass —
   fix the actual issue.
 

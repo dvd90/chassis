@@ -7,6 +7,7 @@ services:
       NODE_ENV: production
       PORT: 8000
       MONGODB_URI: mongodb://mongo:27017/chassis # chassis:mongo
+      DATABASE_URL: postgres://postgres:postgres@db:5432/chassis # chassis:postgres
     depends_on: # chassis:mongo
       - mongo # chassis:mongo
 
@@ -16,6 +17,17 @@ services:
       - '27017:27017' # chassis:mongo
     volumes: # chassis:mongo
       - mongo-data:/data/db # chassis:mongo
+
+  # ponytail: dev Postgres is ephemeral (no named volume) so the top-level
+  # `volumes:` block stays owned solely by mongo and prunes cleanly. Add a
+  # volume if you want data to survive `docker compose down`.
+  db: # chassis:postgres
+    image: postgres:17 # chassis:postgres
+    environment: # chassis:postgres
+      POSTGRES_PASSWORD: postgres # chassis:postgres
+      POSTGRES_DB: chassis # chassis:postgres
+    ports: # chassis:postgres
+      - '5432:5432' # chassis:postgres
 
 volumes: # chassis:mongo
   mongo-data: # chassis:mongo

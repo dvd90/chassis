@@ -10,7 +10,10 @@
 | -------------------------------------------- | ----------------------------------------------------------------- |
 | [Getting started](getting-started.md)        | Step-by-step: scaffold, run, add your first endpoint, test, build |
 | [Building an API](guides/building-an-api.md) | A complete CRUD resource: model, validation, errors, tests        |
-| [Authentication](guides/authentication.md)   | Enabling Auth0 step-by-step, or plugging in any other provider    |
+| [Database](guides/database.md)               | Choosing Mongo/Postgres/SQLite, the ORM, migrations, DB-aware gen |
+| [Authentication](guides/authentication.md)   | Auth0, local JWT, Clerk, or plugging in any other provider        |
+| [MCP server](guides/mcp.md)                  | Exposing the API to AI agents as MCP tools                        |
+| [Payments (x402)](guides/payments-x402.md)   | Payment-gating routes with `@paidRoute` and the x402 protocol     |
 | [Deployment](guides/deployment.md)           | Docker, docker-compose, health probes, production checklist       |
 
 ## Concepts

@@ -1,6 +1,7 @@
 import { RequestHandler } from 'express';
 import { addRouteDefinition, ExpressRoute, HTTPMethod } from './routable';
 import { requireAuth } from './auth';
+import { requirePayment } from './payments';
 
 /**
  * Declare a public endpoint on a Routable controller:
@@ -41,4 +42,18 @@ export function protectedRoute(
   middlewares: RequestHandler[] = []
 ) {
   return route(method, path, [requireAuth(), ...middlewares]);
+}
+
+/**
+ * Same as @route, but the caller must pay `price` (e.g. '$0.01') via the
+ * configured payment provider first (see `src/core/payments.ts`). Responds
+ * 501 if no provider is set up.
+ */
+export function paidRoute(
+  method: HTTPMethod,
+  path: string,
+  price: string,
+  middlewares: RequestHandler[] = []
+) {
+  return route(method, path, [requirePayment(price), ...middlewares]);
 }

@@ -62,7 +62,43 @@ handler. To read the token's claims in a handler, use the `auth`
 property that `express-oauth2-jwt-bearer` sets on the request
 (`req.auth?.payload.sub`, etc.).
 
-## Option B — any other provider
+## Option B — Local JWT (built in)
+
+Pick `--auth jwt` for self-issued Bearer tokens with no third party. Set a
+secret:
+
+```bash
+# .env
+JWT_SECRET=a-long-random-string
+```
+
+`src/integrations/jwt.ts` verifies `Authorization: Bearer <token>` (HS256)
+with [jose](https://github.com/panva/jose). Chassis verifies tokens; _issuing_
+them is app-specific — sign with the same secret:
+
+```ts
+import { SignJWT } from 'jose';
+
+const token = await new SignJWT({ sub: user.id })
+  .setProtectedHeader({ alg: 'HS256' })
+  .setExpirationTime('1h')
+  .sign(new TextEncoder().encode(process.env.JWT_SECRET));
+```
+
+## Option C — Clerk (built in)
+
+Pick `--auth clerk` to use [Clerk](https://clerk.com). Set the key (Clerk reads
+it from the env itself):
+
+```bash
+# .env
+CLERK_SECRET_KEY=sk_test_...
+```
+
+`src/integrations/clerk.ts` registers Clerk's middleware; read the session in a
+handler with `getAuth(req)` from `@clerk/express`.
+
+## Option D — any other provider
 
 `@protectedRoute` delegates to whatever middleware chain was registered
 with `setAuthProvider()` (see `src/core/auth.ts`). To use your own IdP,
