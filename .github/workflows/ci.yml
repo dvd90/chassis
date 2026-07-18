@@ -28,3 +28,20 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  scaffold:
+    # Scaffolds every project type and asserts each installs, verifies, and
+    # ships only the files/deps its chosen modules need (no dead weight).
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20 # the supported floor — most likely to surface issues
+          cache: npm
+
+      - name: Scaffold integration test (structural + build)
+        run: SCAFFOLD_BUILD=1 node --test cli/scaffold.test.mjs

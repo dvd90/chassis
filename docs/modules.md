@@ -22,11 +22,35 @@ exception).
 
 ## Built-in integrations
 
-| Module   | Env vars                         | Hooks                                                                  |
-| -------- | -------------------------------- | ---------------------------------------------------------------------- |
-| `mongo`  | `MONGODB_URI`                    | connect at boot, `/readyz` check, graceful disconnect, compose service |
-| `auth0`  | `AUTH0_DOMAIN`, `AUTH0_AUDIENCE` | registers the auth provider used by `@protectedRoute`                  |
-| `sentry` | `SENTRY_DSN`                     | `Sentry.init` at boot, `captureException` in the error handler         |
+| Module     | Env vars                          | Hooks                                                                  |
+| ---------- | --------------------------------- | ---------------------------------------------------------------------- |
+| `mongo`    | `MONGODB_URI`                     | connect at boot, `/readyz` check, graceful disconnect, compose service |
+| `postgres` | `DATABASE_URL`                    | Drizzle client, `/readyz` ping, graceful close, compose service        |
+| `sqlite`   | `SQLITE_PATH`                     | Drizzle + better-sqlite3, `/readyz` ping, graceful close               |
+| `auth0`    | `AUTH0_DOMAIN`, `AUTH0_AUDIENCE`  | registers the auth provider used by `@protectedRoute`                  |
+| `jwt`      | `JWT_SECRET`                      | registers a jose Bearer-token provider for `@protectedRoute`           |
+| `clerk`    | `CLERK_SECRET_KEY`                | registers Clerk's middleware as the `@protectedRoute` provider         |
+| `sentry`   | `SENTRY_DSN`                      | `Sentry.init` at boot, `captureException` in the error handler         |
+| `x402`     | `X402_PAY_TO`                     | registers the payment gate used by `@paidRoute`                        |
+| `mcp`      | _(none — separate stdio process)_ | `npm run mcp` server exposing the API as agent tools                   |
+
+## Choice groups
+
+Two concerns are **pick-exactly-one** groups rather than independent toggles,
+because their options are mutually exclusive:
+
+- **Database** — `none` / `mongo` / `postgres` / `sqlite`. The ORM follows the
+  choice (Mongoose or Drizzle). See [Database](guides/database.md).
+- **Auth** — `none` / `auth0` / `jwt` / `clerk`, all sharing the
+  `setAuthProvider()` seam. See [Authentication](guides/authentication.md).
+
+Mechanically a group variant is just a module in the `chassis:<name>`
+namespace: choosing Postgres declines `mongo` and `sqlite`, which prune
+exactly like a declined toggle. The template ships every variant installed
+together; the CLI keeps only the one you pick.
+
+`@protectedRoute` (auth) and `@paidRoute` (x402) live in `src/core` and are
+always present — with no provider configured they answer `501`, never open.
 
 ## The `chassis:<name>` markers
 

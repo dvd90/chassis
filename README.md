@@ -2,7 +2,7 @@
 
 **A lightweight, decorator-driven Express + TypeScript backend starter. Clone, run, ship.**
 
-Chassis gives you NestJS-style controller ergonomics on plain Express 5 — in a handful of small files you can actually read. Zero configuration required: the server boots standalone, and every integration (MongoDB, Auth0, Sentry) switches on only when you add its environment variable.
+Chassis gives you NestJS-style controller ergonomics on plain Express 5 — in a handful of small files you can actually read. Zero configuration required: the server boots standalone, and every integration switches on only when you add its environment variable. Scaffold with a preset or pick à la carte — a database (Mongo, Postgres, or SQLite, ORM included), an auth provider (Auth0, JWT, or Clerk), Sentry, an MCP server, and x402 payments — and the CLI ships only what you chose.
 
 ```ts
 export class UserController extends Routable {
@@ -29,8 +29,10 @@ Export the class from `src/controllers/index.ts` — that's the whole wiring.
 ## Quick start
 
 ```bash
-npm create chassis my-api             # interactive scaffolder (pick your modules)
-npm create chassis my-api -- --bare   # minimal build: no integrations, no Docker
+npm create chassis my-api                    # interactive — pick a preset
+npm create chassis my-api -- --preset lite   # SQLite + JWT, no infrastructure
+npm create chassis my-api -- --bare          # minimal build: no modules, no Docker
+npm create chassis my-api -- --db postgres --auth jwt --mcp   # à la carte
 ```
 
 Or use the template directly:
@@ -52,12 +54,15 @@ New here? Follow the **[step-by-step getting-started guide](docs/getting-started
 - **Request correlation** — every request gets a `callId` (or propagates `x-call-id`), echoed in responses and logs
 - **Typed, validated config** — zod-checked environment via `src/config`; the app refuses to boot on bad config
 - **Zod input validation** — `validate({ body, query, params })` middleware with structured 400s
-- **Opt-in integrations** — MongoDB (Mongoose), Auth0 (JWT), Sentry: enabled by env var, never required
+- **Pick-your-stack scaffolder** — presets or à la carte: database + ORM (Mongo/Postgres/SQLite), auth (Auth0/JWT/Clerk), Sentry, MCP, x402 — the CLI prunes everything else so `package.json` carries only what you chose
+- **Opt-in integrations** — every module enables by env var, never required
+- **Payment-gated routes** — `@paidRoute('get', '/report', '$0.01')` via the x402 protocol (opt-in)
+- **MCP server** — expose your API to AI agents as MCP tools (`npm run mcp`, opt-in)
 - **Health endpoints** — `/healthz` (liveness) and `/readyz` (readiness, checks enabled integrations)
 - **Graceful shutdown** — drains connections and closes integrations on SIGTERM/SIGINT
 - **Vitest + supertest** — fast tests against the pure app factory, no server or DB needed
-- **Code generator** — `npm run gen user` scaffolds a controller + test, wired up
-- **Production Docker** — multi-stage build, non-root user, plus docker-compose with Mongo for dev
+- **DB-aware code generator** — `npm run gen user` scaffolds a controller + test wired to your ORM (Drizzle or Mongoose)
+- **Production Docker** — multi-stage build, non-root user, plus docker-compose with your database for dev
 - **CI + Renovate** — GitHub Actions verify pipeline and automated dependency updates
 - **AI-agent ready** — ships `AGENTS.md`, `CLAUDE.md`, `llms.txt`, and an `add-resource` skill so agents write code that matches the conventions (see below)
 

@@ -4,4 +4,5 @@ export * from './response';
 export * from './errors';
 export * from './errorHandler';
 export * from './auth';
+export * from './payments';
 export * from './validate';

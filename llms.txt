@@ -4,9 +4,11 @@
 > Controllers are classes with `@route`-decorated methods; exported
 > controllers auto-mount; responses go through `req.resHandler`; errors
 > are thrown as `AppError`; config is one validated zod schema.
-> Integrations (MongoDB, Auth0, Sentry) are opt-in via environment
-> variables. `npm run verify` (typecheck + lint + test) is the quality
-> gate.
+> Modules are opt-in via environment variables and chosen at scaffold time:
+> a database + ORM (Mongo/Mongoose, Postgres/Drizzle, or SQLite/Drizzle),
+> auth (Auth0, local JWT, or Clerk), Sentry, an MCP server, and x402
+> payments (`@paidRoute`). `npm run verify` (typecheck + lint + test) is the
+> quality gate.
 
 ## Conventions for code generation
 
@@ -30,7 +32,9 @@
 - [Agent guide](AGENTS.md): conventions, do/don't, definition of done
 - [Getting started](docs/getting-started.md): scaffold to running API
 - [Building an API](docs/guides/building-an-api.md): a full CRUD resource
-- [Authentication](docs/guides/authentication.md): Auth0 and custom providers
+- [Database](docs/guides/database.md): Mongo/Postgres/SQLite, ORM, DB-aware gen
+- [Authentication](docs/guides/authentication.md): Auth0, JWT, Clerk, custom providers
+- [MCP](docs/guides/mcp.md) and [Payments (x402)](docs/guides/payments-x402.md)
 - [Core API reference](docs/reference/core-api.md): decorators, resHandler, AppError, validate
 - [Configuration](docs/reference/configuration.md): every env var
 - [Architecture](docs/architecture.md): request lifecycle, decorator flow
