@@ -1,0 +1,786 @@
+/*
+ * Chassis web — design tokens and primitives.
+ *
+ * Plain CSS on purpose: no Tailwind, no CSS-in-JS, no webfont fetch. A
+ * webfont would make `next build` need the network, which is a bad trade
+ * for a starter that has to build in any CI. Every effect below is CSS —
+ * no animation library, no canvas, no client component.
+ *
+ * Dark only, deliberately: the palette is tuned for a near-black canvas
+ * with glow, and a light variant of it would be a different design rather
+ * than the same one inverted.
+ */
+
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+:root {
+  color-scheme: dark;
+
+  --bg: #030308;
+  --bg-elev: #090a11;
+  --surface: rgba(255, 255, 255, 0.026);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --line: rgba(255, 255, 255, 0.075);
+  --line-strong: rgba(255, 255, 255, 0.16);
+
+  --fg: #f2f4fb;
+  --fg-muted: #9098ad;
+  --fg-faint: #616880;
+
+  --accent: #7c8cff;
+  --accent-2: #c46bff;
+  --accent-soft: rgba(124, 140, 255, 0.14);
+  --accent-glow: rgba(124, 140, 255, 0.45);
+  --on-accent: #06070d;
+
+  --success: #35e39a;
+  --success-soft: rgba(53, 227, 154, 0.12);
+  --danger: #ff6b81;
+  --danger-soft: rgba(255, 107, 129, 0.12);
+
+  --radius: 18px;
+  --radius-sm: 11px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.6), 0 24px 60px -28px rgba(0, 0, 0, 0.9);
+
+  --sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+  --mono:
+    ui-monospace, 'SF Mono', SFMono-Regular, 'JetBrains Mono', Menlo, Consolas,
+    monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── Backdrop ───────────────────────────────────────────── */
+/* Three drifting blobs, an engineering grid and a grain layer. All fixed
+   and pointer-events:none, so nothing here can intercept a click. */
+
+.fx {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.fx span {
+  position: absolute;
+  display: block;
+}
+
+.fx-blob {
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.fx-blob-a {
+  top: -18rem;
+  left: -10rem;
+  width: 44rem;
+  height: 34rem;
+  background: radial-gradient(closest-side, var(--accent), transparent);
+  animation: drift-a 26s ease-in-out infinite alternate;
+}
+
+.fx-blob-b {
+  top: -22rem;
+  right: -12rem;
+  width: 40rem;
+  height: 32rem;
+  background: radial-gradient(closest-side, var(--accent-2), transparent);
+  opacity: 0.32;
+  animation: drift-b 32s ease-in-out infinite alternate;
+}
+
+.fx-blob-c {
+  top: 24rem;
+  left: 38%;
+  width: 34rem;
+  height: 26rem;
+  background: radial-gradient(closest-side, var(--success), transparent);
+  opacity: 0.16;
+  animation: drift-c 38s ease-in-out infinite alternate;
+}
+
+@keyframes drift-a {
+  to {
+    transform: translate3d(7rem, 4rem, 0) scale(1.15);
+  }
+}
+
+@keyframes drift-b {
+  to {
+    transform: translate3d(-6rem, 6rem, 0) scale(1.2);
+  }
+}
+
+@keyframes drift-c {
+  to {
+    transform: translate3d(-8rem, -5rem, 0) scale(0.85);
+  }
+}
+
+.fx-grid {
+  inset: 0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 62px 62px;
+  mask-image: radial-gradient(90% 60% at 50% 0%, #000 10%, transparent 75%);
+  -webkit-mask-image: radial-gradient(
+    90% 60% at 50% 0%,
+    #000 10%,
+    transparent 75%
+  );
+}
+
+/* Grain, as an inline SVG turbulence — keeps the page self-contained. */
+.fx-noise {
+  inset: -200%;
+  width: 500%;
+  height: 500%;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 6s steps(6) infinite;
+}
+
+@keyframes grain {
+  0% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-3%, 2%);
+  }
+  40% {
+    transform: translate(2%, -3%);
+  }
+  60% {
+    transform: translate(-2%, -2%);
+  }
+  80% {
+    transform: translate(3%, 3%);
+  }
+}
+
+/* ── Typography ─────────────────────────────────────────── */
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.12;
+  font-weight: 620;
+  letter-spacing: -0.025em;
+}
+
+h1 {
+  font-size: clamp(2.3rem, 6.5vw, 3.9rem);
+  letter-spacing: -0.045em;
+}
+
+h2 {
+  font-size: 1.02rem;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover {
+  color: color-mix(in oklab, var(--accent) 70%, white);
+}
+
+code {
+  font-family: var(--mono);
+  font-size: 0.86em;
+  padding: 0.12em 0.42em;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.035);
+  color: color-mix(in oklab, var(--accent) 45%, var(--fg));
+}
+
+.lede {
+  color: var(--fg-muted);
+  font-size: 1.05rem;
+  max-width: 48ch;
+}
+
+.muted {
+  color: var(--fg-muted);
+}
+
+.hint {
+  color: var(--fg-faint);
+  font-size: 0.83rem;
+  line-height: 1.55;
+}
+
+/* ── Shell ──────────────────────────────────────────────── */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem clamp(1rem, 4vw, 2.5rem);
+  background: color-mix(in oklab, var(--bg) 60%, transparent);
+  backdrop-filter: saturate(1.8) blur(16px);
+  -webkit-backdrop-filter: saturate(1.8) blur(16px);
+}
+
+/* A hairline that shimmers left-to-right, like a telemetry sweep. */
+.site-header::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--line-strong) 18%,
+    var(--accent) 50%,
+    var(--line-strong) 82%,
+    transparent
+  );
+  background-size: 220% 100%;
+  animation: sweep 9s linear infinite;
+  opacity: 0.65;
+}
+
+@keyframes sweep {
+  to {
+    background-position: -220% 0;
+  }
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--fg);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.brand:hover {
+  color: var(--fg);
+}
+
+/* The car sits in a tile so it reads as a mark rather than loose text. */
+.brand-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: linear-gradient(
+    150deg,
+    var(--accent-soft),
+    rgba(255, 255, 255, 0.02)
+  );
+  font-size: 17px;
+  line-height: 1;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.brand:hover .brand-mark {
+  border-color: color-mix(in oklab, var(--accent) 45%, transparent);
+  box-shadow: 0 6px 24px -8px var(--accent-glow);
+  transform: translateX(3px);
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.site-nav a {
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.site-nav a:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+}
+
+main {
+  width: 100%;
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: clamp(2.5rem, 7vw, 5rem) clamp(1rem, 4vw, 2.5rem) 5rem;
+}
+
+.site-footer {
+  max-width: 62rem;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 2.5rem) 3rem;
+  color: var(--fg-faint);
+  font-size: 0.82rem;
+}
+
+.center-stage {
+  display: grid;
+  place-items: center;
+  min-height: min(70dvh, 34rem);
+}
+
+.center-stage > * {
+  width: 100%;
+  max-width: 26rem;
+}
+
+/* ── Hero ───────────────────────────────────────────────── */
+
+.hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  margin-bottom: 3rem;
+}
+
+.hero h1 {
+  max-width: 16ch;
+  background: linear-gradient(
+    112deg,
+    #fff 20%,
+    var(--accent) 62%,
+    var(--accent-2) 92%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shift 14s ease-in-out infinite alternate;
+}
+
+@keyframes shift {
+  to {
+    background-position: 100% 0;
+  }
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  align-self: flex-start;
+  padding: 0.32rem 0.8rem 0.32rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg-muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Cards ──────────────────────────────────────────────── */
+
+.grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background:
+    radial-gradient(
+      120% 100% at 0% 0%,
+      rgba(255, 255, 255, 0.045),
+      transparent 55%
+    ),
+    var(--bg-elev);
+  box-shadow: var(--shadow);
+  transition:
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.3s ease;
+}
+
+/* A conic gradient that traces the border, revealed on hover. */
+.card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  padding: 1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--angle),
+    transparent 55%,
+    var(--accent) 72%,
+    var(--accent-2) 84%,
+    transparent 96%
+  );
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    var(--shadow),
+    0 0 40px -20px var(--accent-glow);
+}
+
+.card:hover::before {
+  opacity: 1;
+  animation: trace 4s linear infinite;
+}
+
+@keyframes trace {
+  to {
+    --angle: 360deg;
+  }
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.card-head h2 {
+  color: var(--fg-faint);
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ── Data rows ──────────────────────────────────────────── */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.row:last-child {
+  border-bottom: 0;
+}
+
+.row dt,
+.row-label {
+  color: var(--fg-muted);
+  font-size: 0.84rem;
+}
+
+.row dd,
+.row-value {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  color: var(--fg);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+/* ── Status ─────────────────────────────────────────────── */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.24rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--fg-muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.pill.is-up {
+  border-color: color-mix(in oklab, var(--success) 42%, transparent);
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.pill.is-down {
+  border-color: color-mix(in oklab, var(--danger) 42%, transparent);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.pill.is-up .dot,
+.eyebrow .dot {
+  animation: halo 2.6s ease-out infinite;
+}
+
+@keyframes halo {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 1;
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px transparent;
+    opacity: 0.85;
+  }
+}
+
+/* ── Controls ───────────────────────────────────────────── */
+
+button,
+.button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  overflow: hidden;
+  padding: 0.58rem 1.05rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: var(--on-accent);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    box-shadow 0.25s ease,
+    transform 0.1s ease,
+    filter 0.2s ease;
+}
+
+/* Light sweeps across on hover. */
+button::after,
+.button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 80%
+  );
+  transform: translateX(-120%);
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+button:hover::after,
+.button:hover::after {
+  transform: translateX(120%);
+}
+
+button:hover,
+.button:hover {
+  color: var(--on-accent);
+  filter: brightness(1.06);
+  box-shadow: 0 10px 30px -10px var(--accent-glow);
+}
+
+button:active,
+.button:active {
+  transform: translateY(1px);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: progress;
+  filter: none;
+  box-shadow: none;
+}
+
+button:disabled::after {
+  display: none;
+}
+
+.button-ghost,
+button.button-ghost {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--fg);
+}
+
+.button-ghost:hover,
+button.button-ghost:hover {
+  color: var(--fg);
+  background: var(--surface-hover);
+  border-color: var(--line-strong);
+  filter: none;
+  box-shadow: none;
+}
+
+:where(a, button, input, summary):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ── Forms ──────────────────────────────────────────────── */
+
+form.card {
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field > span {
+  color: var(--fg-muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+input {
+  width: 100%;
+  padding: 0.62rem 0.78rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.92rem;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+input::placeholder {
+  color: var(--fg-faint);
+}
+
+input:focus {
+  outline: none;
+  border-color: color-mix(in oklab, var(--accent) 65%, transparent);
+  background: rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 0 3px var(--accent-soft),
+    0 0 22px -10px var(--accent-glow);
+}
+
+[role='alert'] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.52rem 0.72rem;
+  border: 1px solid color-mix(in oklab, var(--danger) 38%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+/* ── Entrance ───────────────────────────────────────────── */
+
+.rise {
+  animation: rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -22,6 +22,14 @@ export const MODULES = {
     label: 'x402 payments (@paidRoute)',
     files: ['src/integrations/x402.ts', 'src/types/x402-express.d.ts'],
     deps: ['x402-express']
+  },
+  web: {
+    label: 'Next.js front end (npm-workspaces monorepo)',
+    files: ['web'],
+    scripts: ['verify:web', 'dev:web'],
+    // `deps` are always the API's. The web app keeps its own package.json,
+    // so its dependencies are declared under `web` blocks and pruned there.
+    web: { deps: ['next', 'react', 'react-dom'] }
   }
 };
 
@@ -63,17 +71,63 @@ export const GROUPS = {
       auth0: {
         label: 'Auth0 JWT',
         files: ['src/integrations/auth0.ts'],
-        deps: ['express-oauth2-jwt-bearer']
+        deps: ['express-oauth2-jwt-bearer'],
+        web: {
+          provider: 'auth0',
+          files: [
+            'web/auth/providers/auth0.tsx',
+            'web/auth/providers/auth0.shared.ts',
+            'web/auth/providers/auth0.middleware.ts'
+          ],
+          deps: ['@auth0/nextjs-auth0']
+        }
       },
       jwt: {
         label: 'Local JWT (jose)',
-        files: ['src/integrations/jwt.ts'],
-        deps: ['jose']
+        files: [
+          'src/integrations/jwt.ts',
+          'src/controllers/Auth.controller.ts',
+          'src/utils/password.ts',
+          'src/db/users.ts',
+          'src/db/memory-users.ts',
+          'src/__tests__/auth.test.ts'
+        ],
+        // Deleted with jwt, but present only when the matching database was
+        // also chosen — the auth × db cross-product a flat `files` list
+        // cannot express, so it is never asserted present.
+        crossFiles: [
+          'src/db/sqlite/users.ts',
+          'src/db/sqlite/users.schema.ts',
+          'src/db/sqlite/users.test.ts',
+          'src/db/postgres/users.ts',
+          'src/db/postgres/users.schema.ts',
+          'src/db/mongo/users.ts'
+        ],
+        deps: ['jose'],
+        web: {
+          provider: 'jwt',
+          files: [
+            'web/auth/providers/jwt.tsx',
+            'web/auth/providers/jwt.client.tsx',
+            'web/auth/providers/jwt.shared.ts',
+            'web/auth/providers/jwt.middleware.ts',
+            'web/auth/providers/jwt.middleware.test.ts',
+            'web/app/api'
+          ]
+        }
       },
       clerk: {
         label: 'Clerk',
         files: ['src/integrations/clerk.ts'],
-        deps: ['@clerk/express']
+        deps: ['@clerk/express'],
+        web: {
+          provider: 'clerk',
+          files: [
+            'web/auth/providers/clerk.tsx',
+            'web/auth/providers/clerk.middleware.ts'
+          ],
+          deps: ['@clerk/nextjs']
+        }
       }
     }
   }
@@ -85,23 +139,56 @@ export const PRESETS = {
     label: 'Recommended API — Postgres + JWT + Sentry + Docker',
     db: 'postgres',
     auth: 'jwt',
-    modules: { sentry: true, mcp: false, x402: false },
+    modules: { sentry: true, mcp: false, x402: false, web: false },
+    docker: true
+  },
+  fullstack: {
+    label: 'Full-stack — Postgres + JWT + Next.js front end + Sentry + Docker',
+    db: 'postgres',
+    auth: 'jwt',
+    modules: { sentry: true, mcp: false, x402: false, web: true },
     docker: true
   },
   lite: {
     label: 'Lite — SQLite + JWT, no external infrastructure',
     db: 'sqlite',
     auth: 'jwt',
-    modules: { sentry: false, mcp: false, x402: false },
+    modules: { sentry: false, mcp: false, x402: false, web: false },
     docker: false
   },
   minimal: {
     label: 'Minimal — no database, no auth, standalone',
     db: 'none',
     auth: 'none',
-    modules: { sentry: false, mcp: false, x402: false },
+    modules: { sentry: false, mcp: false, x402: false, web: false },
     docker: false
   }
+};
+
+/**
+ * Where each part of the single-package template lands when the Next.js
+ * front end is included and the project becomes an npm-workspaces monorepo.
+ * Everything not listed stays at the repo root (docs, README, LICENSE,
+ * .github, docker-compose.yml, prettier/husky config).
+ */
+export const MONOREPO = {
+  apiDir: 'apps/api',
+  webDir: 'apps/web',
+  /** Moved into `apps/api` — the backend and everything that builds it. */
+  apiPaths: [
+    'src',
+    'scripts',
+    'tsconfig.json',
+    'tsconfig.build.json',
+    'vitest.config.ts',
+    'eslint.config.mjs',
+    '.env.example',
+    'Dockerfile',
+    '.dockerignore'
+  ],
+  /** Root scripts/devDeps stay repo-wide; the rest belong to apps/api. */
+  rootScripts: ['format', 'prepare'],
+  rootDevDeps: ['prettier', 'husky']
 };
 
 /** Look up a module or group-variant descriptor by name. */

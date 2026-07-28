@@ -15,7 +15,9 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "verify": "npm run typecheck && npm run lint && npm run test",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run verify:web",
+    "verify:web": "npm --prefix web run verify",
+    "dev:web": "npm --prefix web run dev",
     "gen": "node scripts/generate.mjs",
     "mcp": "tsx src/mcp/server.ts",
     "prepare": "husky || true"

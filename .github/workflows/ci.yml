@@ -23,17 +23,32 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Template-only: here `web/` is a standalone package with its own
+      # lockfile, so it installs separately and `npm run verify` covers both.
+      # A generated project is either a workspaces monorepo (one `npm ci`
+      # covers everything) or has no web app at all. # chassis:template
+      - name: Install web dependencies # chassis:template
+        run: npm ci --prefix web # chassis:template
+
       - name: Typecheck, lint & test
         run: npm run verify
 
       - name: Build
         run: npm run build
 
+      # Seconds, and it catches a mistyped marker or a stale module catalog
+      # entry — both of which fail silently. Worth running here for fast
+      # feedback rather than only in the slow scaffold job below.
+      - name: Module catalog & CLI contract
+        run: node --test cli/scaffold.test.mjs
+
   scaffold:
-    # Scaffolds every project type and asserts each installs, verifies, and
-    # ships only the files/deps its chosen modules need (no dead weight).
+    # Scaffolds every project type and asserts each installs, verifies,
+    # builds, and ships only the files/deps its chosen modules need (no dead
+    # weight). The build half is the only place `next build` ever runs for a
+    # generated project, so it is the only guard on front-end bundling.
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -43,5 +58,5 @@ jobs:
           node-version: 20 # the supported floor — most likely to surface issues
           cache: npm
 
-      - name: Scaffold integration test (structural + build)
+      - name: Scaffold integration test (all layers, incl. install & build)
         run: SCAFFOLD_BUILD=1 node --test cli/scaffold.test.mjs

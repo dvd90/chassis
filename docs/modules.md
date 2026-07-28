@@ -33,6 +33,7 @@ exception).
 | `sentry`   | `SENTRY_DSN`                      | `Sentry.init` at boot, `captureException` in the error handler         |
 | `x402`     | `X402_PAY_TO`                     | registers the payment gate used by `@paidRoute`                        |
 | `mcp`      | _(none — separate stdio process)_ | `npm run mcp` server exposing the API as agent tools                   |
+| `web`      | _(none — a separate app)_         | Next.js front end; restructures the project into a workspaces monorepo |
 
 ## Choice groups
 
@@ -43,6 +44,11 @@ because their options are mutually exclusive:
   choice (Mongoose or Drizzle). See [Database](guides/database.md).
 - **Auth** — `none` / `auth0` / `jwt` / `clerk`, all sharing the
   `setAuthProvider()` seam. See [Authentication](guides/authentication.md).
+  Each variant also has a **web half** (`web/auth/providers/<name>`) behind
+  the equivalent front-end seam — one re-export line in `web/auth/active.ts`.
+  Local JWT additionally ships the piece the hosted providers don't need: a
+  register/login controller and a user store that follows the database
+  choice. See [Web front end](guides/web.md).
 
 Mechanically a group variant is just a module in the `chassis:<name>`
 namespace: choosing Postgres declines `mongo` and `sqlite`, which prune

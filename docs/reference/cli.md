@@ -7,6 +7,7 @@ npm create chassis my-api                    # interactive — pick a preset
 npm create chassis my-api -- --preset lite   # SQLite + JWT, no infrastructure
 npm create chassis my-api -- --yes           # Recommended API preset, no prompts
 npm create chassis my-api -- --bare          # nothing — standalone build
+npm create chassis my-api -- --preset fullstack              # + Next.js front end
 npm create chassis my-api -- --db postgres --auth jwt --mcp   # à la carte
 ```
 
@@ -17,11 +18,12 @@ generated list of presets, choices, and toggles.
 
 ### Presets (`--preset <name>`)
 
-| Preset    | Stack                                          |
-| --------- | ---------------------------------------------- |
-| `api`     | Postgres + JWT + Sentry + Docker (the default) |
-| `lite`    | SQLite + JWT — zero external infrastructure    |
-| `minimal` | No database, no auth — standalone              |
+| Preset      | Stack                                                 |
+| ----------- | ----------------------------------------------------- |
+| `api`       | Postgres + JWT + Sentry + Docker (the default)        |
+| `fullstack` | `api` **+ a Next.js front end** (workspaces monorepo) |
+| `lite`      | SQLite + JWT — zero external infrastructure           |
+| `minimal`   | No database, no auth — standalone                     |
 
 ### Choices — pick exactly one of each
 
@@ -35,12 +37,13 @@ Choosing a database brings its ORM: `mongo` → Mongoose, `postgres`/`sqlite`
 
 ### Toggles — independent on/off
 
-| Flag       | Module                                     |
-| ---------- | ------------------------------------------ |
-| `--sentry` | Sentry error reporting                     |
-| `--mcp`    | MCP server exposing the API as agent tools |
-| `--x402`   | x402 payment-gating via `@paidRoute`       |
-| `--docker` | Dockerfile + docker-compose                |
+| Flag       | Module                                                    |
+| ---------- | --------------------------------------------------------- |
+| `--sentry` | Sentry error reporting                                    |
+| `--mcp`    | MCP server exposing the API as agent tools                |
+| `--x402`   | x402 payment-gating via `@paidRoute`                      |
+| `--web`    | Next.js front end — see [Web front end](../guides/web.md) |
+| `--docker` | Dockerfile + docker-compose                               |
 
 ### Other flags
 
@@ -67,7 +70,7 @@ Choosing a database brings its ORM: `mongo` → Mongoose, `postgres`/`sqlite`
 5. **Makes the project the user's own** — rewrites the `LICENSE` copyright and
    removes the maintainer-only `docs/maintainers.md`
 
-The generated project passes `npm run verify` and its `package.json` carries
+The generated project passes `npm run verify` and `npm run build`, and its `package.json` carries
 only the dependencies the chosen modules need — no dead weight.
 
 For developing the CLI itself, scaffold from a local checkout instead of the
@@ -114,6 +117,12 @@ Refuses to overwrite an existing controller.
 | `npm run verify`     | typecheck + lint + test — what CI and the pre-commit hook run |
 | `npm run gen <Name>` | Generate a controller (above)                                 |
 | `npm run mcp`        | Start the MCP server over stdio (only with the MCP module)    |
+
+With the Next.js front end (`--web`) the project is a workspaces monorepo,
+so these live in `apps/api` and the root gains orchestration instead:
+`npm run dev` starts both apps, `npm run build` and `npm run verify` fan out
+to every workspace, and `npm run gen <Name>` forwards to `apps/api`. See
+[Web front end](../guides/web.md).
 
 ## Git hooks
 

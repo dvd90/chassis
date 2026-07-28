@@ -19,7 +19,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import readline from 'node:readline/promises';
-import { MODULES, GROUPS, PRESETS, descriptor } from './modules.mjs';
+import { MODULES, GROUPS, PRESETS, MONOREPO, descriptor } from './modules.mjs';
 
 const REPO = 'dvd90/chassis';
 const TARBALL_URL = `https://codeload.github.com/${REPO}/tar.gz/HEAD`;
@@ -276,6 +276,8 @@ rl?.close();
 const IGNORE = new Set([
   'node_modules',
   '.git',
+  '.next',
+  '.history', // VS Code local history — never part of the template
   'dist',
   'coverage',
   'cli',
@@ -329,7 +331,9 @@ const kept = [
     .map(([key]) => key)
 ];
 
-const declined = [];
+// `chassis:template` marks lines that exist only to keep the Chassis repo
+// itself building — they are never part of a generated project.
+const declined = ['template'];
 for (const group of Object.values(GROUPS)) {
   for (const key of Object.keys(group.variants)) {
     if (key !== 'none' && !kept.includes(key)) declined.push(key);
@@ -375,6 +379,21 @@ for (const file of walkTextFiles(targetDir)) {
 const pkgPath = path.join(targetDir, 'package.json');
 const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
 
+/**
+ * Delete an npm script and unchain it from any script that runs it, so
+ * dropping a module never leaves `npm run verify` calling something that
+ * no longer exists.
+ */
+function removeScript(target, script) {
+  delete target.scripts?.[script];
+  for (const [name, body] of Object.entries(target.scripts ?? {})) {
+    target.scripts[name] = body.replace(
+      new RegExp(`\\s*&&\\s*npm run ${script}(?![\\w:-])`),
+      ''
+    );
+  }
+}
+
 const keptDeps = new Set();
 const keptDevDeps = new Set();
 for (const name of kept) {
@@ -387,7 +406,7 @@ for (const name of kept) {
 for (const name of declined) {
   const d = descriptor(name);
   if (!d) continue;
-  for (const file of d.files ?? []) {
+  for (const file of [...(d.files ?? []), ...(d.crossFiles ?? [])]) {
     fs.rmSync(path.join(targetDir, file), { recursive: true, force: true });
   }
   for (const dep of d.deps ?? []) {
@@ -396,9 +415,7 @@ for (const name of declined) {
   for (const dep of d.devDeps ?? []) {
     if (!keptDevDeps.has(dep)) delete pkg.devDependencies?.[dep];
   }
-  for (const script of d.scripts ?? []) {
-    delete pkg.scripts?.[script];
-  }
+  for (const script of d.scripts ?? []) removeScript(pkg, script);
 }
 
 if (!sel.docker) {
@@ -448,6 +465,160 @@ if (fs.existsSync(licensePath)) {
   fs.writeFileSync(licensePath, license);
 }
 
+// ── Web front end: select the auth provider, then restructure ───
+
+/**
+ * Without `--web` the layout is untouched: a single package, exactly as the
+ * template ships. With it, the API moves under apps/api, the Next.js app
+ * under apps/web, and the root package.json becomes an npm workspaces root.
+ */
+function selectWebAuthProvider(webDir) {
+  const provider = GROUPS.auth.variants[sel.auth]?.web?.provider ?? 'none';
+
+  // The whole provider switch is these two re-export lines — see
+  // web/auth/active.ts. Nothing else in the app names a provider.
+  for (const file of ['auth/active.ts', 'auth/active-middleware.ts']) {
+    const full = path.join(webDir, file);
+    const source = fs.readFileSync(full, 'utf8');
+    fs.writeFileSync(
+      full,
+      source.replaceAll("'./providers/none", `'./providers/${provider}`)
+    );
+  }
+
+  // Declined providers' web files, then the `none` stubs if a real provider
+  // took over, then the template-only conformance check.
+  for (const name of declined) {
+    for (const file of descriptor(name)?.web?.files ?? []) {
+      fs.rmSync(path.join(targetDir, file), { recursive: true, force: true });
+    }
+  }
+  if (provider !== 'none') {
+    for (const stub of ['none.tsx', 'none.middleware.ts']) {
+      fs.rmSync(path.join(webDir, 'auth/providers', stub), { force: true });
+    }
+  }
+  for (const file of ['auth/providers/conformance.ts', 'auth/types.ts']) {
+    fs.rmSync(path.join(webDir, file), { force: true });
+  }
+
+  const webPkgPath = path.join(webDir, 'package.json');
+  const webPkg = JSON.parse(fs.readFileSync(webPkgPath, 'utf8'));
+  for (const name of declined) {
+    for (const dep of descriptor(name)?.web?.deps ?? []) {
+      delete webPkg.dependencies?.[dep];
+    }
+  }
+  webPkg.name = `${projectName}-web`;
+  webPkg.version = '0.1.0';
+  webPkg.description = '';
+  fs.writeFileSync(webPkgPath, JSON.stringify(webPkg, null, 2) + '\n');
+}
+
+/** Hoist the single-package layout into apps/api + apps/web. */
+function restructureToMonorepo(webDir) {
+  const apiDir = path.join(targetDir, MONOREPO.apiDir);
+  fs.mkdirSync(apiDir, { recursive: true });
+  for (const rel of MONOREPO.apiPaths) {
+    const from = path.join(targetDir, rel);
+    if (fs.existsSync(from)) fs.renameSync(from, path.join(apiDir, rel));
+  }
+
+  const target = path.join(targetDir, MONOREPO.webDir);
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.renameSync(webDir, target);
+
+  // package.json splits three ways: repo-wide concerns stay at the root,
+  // everything else follows the code it belongs to.
+  const apiPkg = JSON.parse(JSON.stringify(pkg));
+  apiPkg.name = `${projectName}-api`;
+  apiPkg.private = true;
+  for (const script of MONOREPO.rootScripts) delete apiPkg.scripts?.[script];
+  // The single-package layout drives the web app from the API's scripts;
+  // the workspaces root owns that now, so apps/api keeps only its own.
+  for (const script of MODULES.web.scripts ?? []) removeScript(apiPkg, script);
+  for (const dep of MONOREPO.rootDevDeps) delete apiPkg.devDependencies?.[dep];
+  fs.writeFileSync(
+    path.join(apiDir, 'package.json'),
+    JSON.stringify(apiPkg, null, 2) + '\n'
+  );
+
+  const rootDevDeps = {};
+  for (const dep of MONOREPO.rootDevDeps) {
+    if (pkg.devDependencies?.[dep]) rootDevDeps[dep] = pkg.devDependencies[dep];
+  }
+  fs.writeFileSync(
+    pkgPath,
+    JSON.stringify(
+      {
+        name: projectName,
+        version: '0.1.0',
+        private: true,
+        workspaces: [MONOREPO.apiDir, MONOREPO.webDir],
+        engines: pkg.engines,
+        scripts: {
+          // `wait` keeps Ctrl-C killing both dev servers, not just the shell.
+          dev: `npm run dev -w ${MONOREPO.apiDir} & npm run dev -w ${MONOREPO.webDir} & wait`,
+          build: 'npm run build --workspaces --if-present',
+          verify: 'npm run verify --workspaces --if-present',
+          gen: `npm run gen -w ${MONOREPO.apiDir} --`,
+          format: 'prettier --write .',
+          prepare: 'husky || true'
+        },
+        devDependencies: rootDevDeps
+      },
+      null,
+      2
+    ) + '\n'
+  );
+
+  // Docker builds from apps/api, which has no lockfile of its own — the
+  // workspace lockfile lives at the repo root.
+  const dockerfile = path.join(apiDir, 'Dockerfile');
+  if (fs.existsSync(dockerfile)) {
+    fs.writeFileSync(
+      dockerfile,
+      fs
+        .readFileSync(dockerfile, 'utf8')
+        .replace('npm ci --ignore-scripts', 'npm install --ignore-scripts')
+    );
+  }
+  const compose = path.join(targetDir, 'docker-compose.yml');
+  if (fs.existsSync(compose)) {
+    fs.writeFileSync(
+      compose,
+      fs
+        .readFileSync(compose, 'utf8')
+        .replace(/^(\s*)build: \.$/m, `$1build: ./${MONOREPO.apiDir}`)
+    );
+  }
+
+  // The docs describe the single-package layout; say once, up front, how to
+  // read them here rather than rewriting every path in every guide.
+  const note =
+    `> **Layout:** this project is an npm-workspaces monorepo. The API lives\n` +
+    `> in \`${MONOREPO.apiDir}/\` — read every \`src/...\` path below as\n` +
+    `> \`${MONOREPO.apiDir}/src/...\`. The Next.js front end is in \`${MONOREPO.webDir}/\`.\n\n`;
+  for (const doc of ['AGENTS.md', 'CLAUDE.md', 'README.md']) {
+    const full = path.join(targetDir, doc);
+    if (!fs.existsSync(full)) continue;
+    const body = fs.readFileSync(full, 'utf8');
+    const firstBreak = body.indexOf('\n\n');
+    fs.writeFileSync(
+      full,
+      firstBreak === -1
+        ? note + body
+        : body.slice(0, firstBreak + 2) + note + body.slice(firstBreak + 2)
+    );
+  }
+}
+
+const webDir = path.join(targetDir, 'web');
+if (sel.modules.web) {
+  selectWebAuthProvider(webDir);
+  restructureToMonorepo(webDir);
+}
+
 // ── Finish up ──────────────────────────────────────────
 
 const run = (cmd, cmdArgs, opts = {}) =>
@@ -484,12 +655,19 @@ if (!withInstall) console.log('  npm install');
 if (sel.docker && (sel.db === 'mongo' || sel.db === 'postgres')) {
   console.log('  docker compose up -d   # start the database');
 }
+const srcRoot = sel.modules.web ? `${MONOREPO.apiDir}/src` : 'src';
 if (sel.db === 'postgres' || sel.db === 'sqlite') {
   console.log(
-    `  npx drizzle-kit generate --config src/db/${sel.db}/drizzle.config.ts`
+    `  npx drizzle-kit generate --config ${srcRoot}/db/${sel.db}/drizzle.config.ts`
   );
 }
-console.log('  npm run dev');
-if (sel.modules.mcp)
-  console.log('  npm run mcp            # MCP server (stdio)');
+if (sel.modules.web) {
+  console.log('  npm run dev            # API on :8000, web on :3000');
+} else {
+  console.log('  npm run dev');
+}
+if (sel.modules.mcp) {
+  const workspace = sel.modules.web ? ` -w ${MONOREPO.apiDir}` : '';
+  console.log(`  npm run mcp${workspace}            # MCP server (stdio)`);
+}
 console.log(`\n${dim('Docs: README.md · AGENTS.md · docs/README.md')}\n`);

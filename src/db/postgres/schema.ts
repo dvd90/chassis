@@ -9,3 +9,5 @@ export const examples = pgTable('examples', {
   name: text('name').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull()
 });
+
+export * from './users.schema'; // chassis:jwt

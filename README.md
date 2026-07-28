@@ -2,7 +2,7 @@
 
 **A lightweight, decorator-driven Express + TypeScript backend starter. Clone, run, ship.**
 
-Chassis gives you NestJS-style controller ergonomics on plain Express 5 — in a handful of small files you can actually read. Zero configuration required: the server boots standalone, and every integration switches on only when you add its environment variable. Scaffold with a preset or pick à la carte — a database (Mongo, Postgres, or SQLite, ORM included), an auth provider (Auth0, JWT, or Clerk), Sentry, an MCP server, and x402 payments — and the CLI ships only what you chose.
+Chassis gives you NestJS-style controller ergonomics on plain Express 5 — in a handful of small files you can actually read. Zero configuration required: the server boots standalone, and every integration switches on only when you add its environment variable. Scaffold with a preset or pick à la carte — a database (Mongo, Postgres, or SQLite, ORM included), an auth provider (Auth0, JWT, or Clerk), an optional Next.js front end, Sentry, an MCP server, and x402 payments — and the CLI ships only what you chose.
 
 ```ts
 export class UserController extends Routable {
@@ -32,6 +32,7 @@ Export the class from `src/controllers/index.ts` — that's the whole wiring.
 npm create chassis my-api                    # interactive — pick a preset
 npm create chassis my-api -- --preset lite   # SQLite + JWT, no infrastructure
 npm create chassis my-api -- --bare          # minimal build: no modules, no Docker
+npm create chassis my-app -- --preset fullstack  # + Next.js front end (monorepo)
 npm create chassis my-api -- --db postgres --auth jwt --mcp   # à la carte
 ```
 
@@ -54,9 +55,10 @@ New here? Follow the **[step-by-step getting-started guide](docs/getting-started
 - **Request correlation** — every request gets a `callId` (or propagates `x-call-id`), echoed in responses and logs
 - **Typed, validated config** — zod-checked environment via `src/config`; the app refuses to boot on bad config
 - **Zod input validation** — `validate({ body, query, params })` middleware with structured 400s
-- **Pick-your-stack scaffolder** — presets or à la carte: database + ORM (Mongo/Postgres/SQLite), auth (Auth0/JWT/Clerk), Sentry, MCP, x402 — the CLI prunes everything else so `package.json` carries only what you chose
+- **Pick-your-stack scaffolder** — presets or à la carte: database + ORM (Mongo/Postgres/SQLite), auth (Auth0/JWT/Clerk), a Next.js front end, Sentry, MCP, x402 — the CLI prunes everything else so `package.json` carries only what you chose
 - **Opt-in integrations** — every module enables by env var, never required
 - **Payment-gated routes** — `@paidRoute('get', '/report', '$0.01')` via the x402 protocol (opt-in)
+- **Optional Next.js front end** — `--web` adds an App Router app and makes the project an npm-workspaces monorepo (`apps/api` + `apps/web`); the auth provider you picked is wired on both sides
 - **MCP server** — expose your API to AI agents as MCP tools (`npm run mcp`, opt-in)
 - **Health endpoints** — `/healthz` (liveness) and `/readyz` (readiness, checks enabled integrations)
 - **Graceful shutdown** — drains connections and closes integrations on SIGTERM/SIGINT

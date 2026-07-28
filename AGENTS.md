@@ -65,16 +65,18 @@ uses. Green means done; anything else means keep going.
 
 ## Where things live
 
-| Need to…                     | Go to                                        |
-| ---------------------------- | -------------------------------------------- |
-| Add/change an endpoint       | `src/controllers/*.controller.ts`            |
-| Validate request input       | `validate({...})` + a zod schema             |
-| Business logic               | `src/services/*` (create if absent)          |
-| Database models              | `src/models/*` (create if absent)            |
-| Add an env var / config      | `src/config/index.ts` + `.env.example`       |
-| Add an error type            | `src/core/errors.ts` (`ERROR_CODES`)         |
-| Add an optional integration  | `src/integrations/*` — see `docs/modules.md` |
-| Framework internals (rarely) | `src/core/*`                                 |
+| Need to…                     | Go to                                             |
+| ---------------------------- | ------------------------------------------------- |
+| Add/change an endpoint       | `src/controllers/*.controller.ts`                 |
+| Validate request input       | `validate({...})` + a zod schema                  |
+| Business logic               | `src/services/*` (create if absent)               |
+| Database models              | `src/models/*` (create if absent)                 |
+| Add an env var / config      | `src/config/index.ts` + `.env.example`            |
+| Add an error type            | `src/core/errors.ts` (`ERROR_CODES`)              |
+| Add an optional integration  | `src/integrations/*` — see `docs/modules.md`      |
+| Framework internals (rarely) | `src/core/*`                                      |
+| Front-end page or API call   | `web/app/*`, `web/lib/api.ts` (if present)        |
+| Front-end auth               | `web/auth/providers/*` — see `docs/guides/web.md` |
 
 ## Reference
 
@@ -89,6 +91,10 @@ useful for agents:
 ## Definition of done
 
 1. Feature works (add or update a test proving it).
-2. `npm run verify` passes — typecheck, lint, and tests all green.
-3. No new `process.env` reads, no `res.status().json()`, no try/catch in
+2. `npm run verify` passes — typecheck, lint, and tests all green. When a
+   web app is present, verify covers it too; adding an auth provider there
+   means adding it to `web/auth/providers/conformance.ts`.
+3. `npm run build` passes. In a monorepo that also runs `next build`, which
+   is the only thing that exercises front-end middleware and bundling.
+4. No new `process.env` reads, no `res.status().json()`, no try/catch in
    controllers, no edits to `src/core` for feature work.
