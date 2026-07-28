@@ -28,6 +28,7 @@ const checkOnly = process.argv.includes('--check');
 
 const REPO = 'dvd90/chassis';
 const BLOB = `https://github.com/${REPO}/blob/master/`;
+const SITE = 'https://dvd90.github.io/chassis/';
 
 const fail = (message) => {
   console.error(`\x1b[31m✖ ${message}\x1b[0m`);
@@ -404,6 +405,24 @@ const html = `<!doctype html>
 <meta name="description" content="A lightweight, decorator-driven Express + TypeScript backend starter. Clone, run, ship.">
 <meta name="color-scheme" content="dark">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23090a11'/%3E%3Ctext x='16' y='23' font-size='19' text-anchor='middle'%3E%F0%9F%8F%8E%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="canonical" href="${SITE}">
+<meta property="og:title" content="Chassis — Express 5 + TypeScript backend starter">
+<meta property="og:description" content="Pick a database, an auth provider and an optional Next.js front end; the scaffolder ships only what you chose.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${SITE}">
+<script type="application/ld+json">${JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareSourceCode',
+  name: 'Chassis',
+  description:
+    'A lightweight, decorator-driven Express 5 + TypeScript backend starter. Scaffold with create-chassis and get only the modules you chose.',
+  codeRepository: `https://github.com/${REPO}`,
+  programmingLanguage: ['TypeScript', 'JavaScript'],
+  runtimePlatform: 'Node.js',
+  license: 'https://opensource.org/licenses/MIT',
+  url: SITE,
+  author: { '@type': 'Person', name: 'dvd90' }
+})}</script>
 <style>${CSS}</style>
 </head>
 <body id="top">
@@ -464,16 +483,60 @@ const html = `<!doctype html>
 </html>
 `;
 
+// ── Agent-readable companions ───────────────────────────────
+// llms.txt is the convention for "how a language model should understand
+// this project". It only helps if it is actually served, so the repo's copy
+// is republished here with its links pointed at the site, alongside a
+// llms-full.txt carrying every page's source in one fetch.
+
+const llmsTxt =
+  fs
+    .readFileSync(path.join(repoRoot, 'llms.txt'), 'utf8')
+    .replace(/\]\(([^)]+)\)/g, (all, target) => {
+      const page = byFile.get(target.split('#')[0].replace(/^\.\//, ''));
+      return page ? `](${SITE}#${page.slug})` : all;
+    })
+    .trimEnd() +
+  `\n\n## Full text\n\n` +
+  `- [Every page, one file](${SITE}llms-full.txt)\n` +
+  `- [Agent guide](${SITE}AGENTS.md): conventions and definition of done\n` +
+  `- [Source](https://github.com/${REPO})\n`;
+
+const llmsFull = [
+  '# Chassis — complete documentation',
+  '',
+  `Generated from https://github.com/${REPO}. Every page below is the`,
+  'verbatim source markdown, in the order the site presents it.',
+  ...pages.map(
+    (page) => `\n\n<!-- source: ${page.file} -->\n\n${page.markdown.trim()}`
+  )
+].join('\n');
+
+const extras = [
+  ['llms.txt', llmsTxt],
+  ['llms-full.txt', llmsFull],
+  ['AGENTS.md', fs.readFileSync(path.join(repoRoot, 'AGENTS.md'), 'utf8')],
+  ['robots.txt', `User-agent: *\nAllow: /\nSitemap: ${SITE}sitemap.xml\n`],
+  [
+    'sitemap.xml',
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      `  <url><loc>${SITE}</loc></url>\n</urlset>\n`
+  ]
+];
+
 const kb = (n) => `${(n / 1024).toFixed(0)} kB`;
+const summary =
+  `${pages.length} pages · ${searchIndex.length} search entries · ` +
+  `${kb(html.length)} + ${extras.length} companion files`;
 
 if (checkOnly) {
-  console.log(
-    `✔ ${pages.length} pages · ${searchIndex.length} search entries · ${kb(html.length)} (not written)`
-  );
+  console.log(`✔ ${summary} (not written)`);
 } else {
   fs.mkdirSync(outDir, { recursive: true });
   fs.writeFileSync(path.join(outDir, 'index.html'), html);
-  console.log(
-    `✔ site/dist/index.html — ${pages.length} pages · ${searchIndex.length} search entries · ${kb(html.length)}`
-  );
+  for (const [name, body] of extras) {
+    fs.writeFileSync(path.join(outDir, name), body);
+  }
+  console.log(`✔ site/dist — ${summary}`);
 }

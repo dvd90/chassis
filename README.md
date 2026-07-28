@@ -31,11 +31,11 @@ Export the class from `src/controllers/index.ts` — that's the whole wiring.
 ## Quick start
 
 ```bash
-npm create chassis my-api                    # interactive — pick a preset
-npm create chassis my-api -- --preset lite   # SQLite + JWT, no infrastructure
-npm create chassis my-api -- --bare          # minimal build: no modules, no Docker
-npm create chassis my-app -- --preset fullstack  # + Next.js front end (monorepo)
+npm create chassis my-api -- --yes                      # zero prompts: Postgres + JWT + Sentry + Docker
+npm create chassis my-app -- --preset fullstack --yes   # the same, plus a Next.js front end
+npm create chassis my-api                               # interactive — pick a preset
 npm create chassis my-api -- --db postgres --auth jwt --mcp   # à la carte
+npm create chassis my-api -- --bare                     # nothing — standalone build
 ```
 
 Or use the template directly:
@@ -48,6 +48,23 @@ cd my-api && npm install && npm run dev
 That's it — no database, no env file, no accounts needed. Open http://localhost:8000/status.
 
 New here? Follow the **[step-by-step getting-started guide](docs/getting-started.md)** — zero to a tested API in ~10 minutes.
+
+## For AI agents
+
+Every path is non-interactive: `--yes` and `--bare` never prompt, and the CLI
+skips prompts automatically whenever stdin isn't a TTY. One command produces a
+project that already typechecks, lints and tests green.
+
+- **[llms.txt](https://dvd90.github.io/chassis/llms.txt)** — the project, its
+  conventions and its docs index, in one fetch
+- **[llms-full.txt](https://dvd90.github.io/chassis/llms-full.txt)** — every
+  documentation page, concatenated
+- **[AGENTS.md](AGENTS.md)** — the conventions to follow when writing code in a
+  Chassis project, and the definition of done
+
+Generated projects carry `AGENTS.md`, `CLAUDE.md`, `llms.txt` and an
+`add-resource` skill, so whichever agent opens one writes code that matches the
+rest of the codebase rather than fighting it.
 
 ## Features
 
