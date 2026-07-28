@@ -24,6 +24,7 @@ The CLI itself has **zero dependencies** and runs on **Node 20+**.
 - [Presets](#presets)
 - [Choices — pick one of each](#choices--pick-one-of-each)
 - [Toggles — independent add-ons](#toggles--independent-add-ons)
+- [Front end](#front-end)
 - [All flags](#all-flags)
 - [Interactive vs. non-interactive](#interactive-vs-non-interactive)
 - [What gets generated](#what-gets-generated)
@@ -40,6 +41,7 @@ npm create chassis my-api                    # interactive — pick a preset
 npm create chassis my-api -- --preset lite   # SQLite + JWT, no infrastructure
 npm create chassis my-api -- --yes           # Recommended API preset, no prompts
 npm create chassis my-api -- --bare          # nothing — standalone build
+npm create chassis my-app -- --preset fullstack               # + Next.js front end
 npm create chassis my-api -- --db postgres --auth jwt --mcp   # à la carte
 ```
 
@@ -55,11 +57,12 @@ module yourself. It ends with a confirmation summary before writing anything.
 
 `--preset <name>`
 
-| Preset    | Stack                                          |
-| --------- | ---------------------------------------------- |
-| `api`     | Postgres + JWT + Sentry + Docker — the default |
-| `lite`    | SQLite + JWT — zero external infrastructure    |
-| `minimal` | No database, no auth — standalone              |
+| Preset      | Stack                                                    |
+| ----------- | -------------------------------------------------------- |
+| `api`       | Postgres + JWT + Sentry + Docker — the default           |
+| `fullstack` | `api` **plus a Next.js front end** (workspaces monorepo) |
+| `lite`      | SQLite + JWT — zero external infrastructure              |
+| `minimal`   | No database, no auth — standalone                        |
 
 ---
 
@@ -87,7 +90,41 @@ These are mutually exclusive groups. Choosing a database brings its ORM along.
 | `--sentry` | Sentry error reporting                                            |
 | `--mcp`    | MCP server exposing the API to AI agents as tools (`npm run mcp`) |
 | `--x402`   | x402 payment-gating via the `@paidRoute` decorator                |
+| `--web`    | Next.js front end — see [Front end](#front-end)                   |
 | `--docker` | Dockerfile + docker-compose (with your database)                  |
+
+---
+
+## Front end
+
+`--web` adds a **Next.js 15** App Router front end and turns the project into an
+npm-workspaces monorepo. Without it the layout is unchanged: a single package.
+
+```
+my-app/
+  package.json      # workspaces root: dev · build · verify
+  apps/api/         # the Chassis backend
+  apps/web/         # the Next.js app
+```
+
+`npm run dev` runs both (API on `:8000`, web on `:3000`); `npm run verify` and
+`npm run build` fan out to each workspace.
+
+The auth provider you picked is wired on **both** sides. Every provider exports
+the same five things, and the app imports them from `auth/active.ts` — a single
+re-export line the scaffolder rewrites, so nothing else in the app names a
+provider:
+
+| `--auth` | Front end                                                                   |
+| -------- | --------------------------------------------------------------------------- |
+| `jwt`    | sign-in form → `/api/session` → API `/auth/login` → **httpOnly cookie**     |
+| `auth0`  | `@auth0/nextjs-auth0`, with the API audience set so you get an access token |
+| `clerk`  | `@clerk/nextjs` — `<SignIn/>` and `auth().getToken()`                       |
+| `none`   | no sign-in; requests go out unauthenticated                                 |
+
+With `--auth jwt` the API also gains `POST /auth/register` and `/auth/login`,
+with users stored in whichever database you chose (or in memory when you chose
+none). Passwords use scrypt from `node:crypto` — no native build.
 
 ---
 
@@ -95,12 +132,13 @@ These are mutually exclusive groups. Choosing a database brings its ORM along.
 
 | Flag              | Effect                                                        |
 | ----------------- | ------------------------------------------------------------- |
-| `--preset <name>` | `api` · `lite` · `minimal` (see above)                        |
+| `--preset <name>` | `api` · `fullstack` · `lite` · `minimal` (see above)          |
 | `--db <name>`     | Database choice (see above)                                   |
 | `--auth <name>`   | Auth choice (see above)                                       |
 | `--sentry`        | Include Sentry                                                |
 | `--mcp`           | Include the MCP server                                        |
 | `--x402`          | Include x402 payments                                         |
+| `--web`           | Include the Next.js front end (monorepo layout)               |
 | `--docker`        | Include Docker (`--no-docker` to exclude)                     |
 | `--yes`, `-y`     | No prompts; use the `api` preset (or the one from `--preset`) |
 | `--bare`          | No prompts; the `minimal` preset, no Docker                   |
