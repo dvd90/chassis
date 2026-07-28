@@ -324,6 +324,18 @@ function assertScaffold(dir, keptNames) {
     assert.ok(!fs.existsSync(path.join(dir, gone)), `shipped ${gone}`);
   }
 
+  // Every generated project carries its conventions in each agent's own
+  // format — that is what keeps the code an agent writes idiomatic.
+  for (const guide of [
+    'AGENTS.md',
+    'CLAUDE.md',
+    'llms.txt',
+    '.cursor/rules/chassis.mdc',
+    '.github/copilot-instructions.md'
+  ]) {
+    assert.ok(fs.existsSync(path.join(dir, guide)), `missing ${guide}`);
+  }
+
   assert.equal(rootPkg.name, path.basename(dir), 'project name');
   assert.equal(rootPkg.version, '0.1.0', 'project version');
   assert.ok(!rootPkg.repository, 'inherited Chassis repository field');
