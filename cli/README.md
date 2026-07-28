@@ -5,6 +5,10 @@ decorator-driven **Express 5 + TypeScript** starter. Pick a stack (or a preset),
 and the CLI generates a project containing **only what you chose**: no unused
 files, no unused dependencies.
 
+**[📖 Documentation](https://dvd90.github.io/chassis/)** ·
+[Getting started](https://dvd90.github.io/chassis/#getting-started) ·
+[GitHub](https://github.com/dvd90/chassis)
+
 ```bash
 npm create chassis my-api
 # or: npx create-chassis my-api

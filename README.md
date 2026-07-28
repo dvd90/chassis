@@ -2,6 +2,8 @@
 
 **A lightweight, decorator-driven Express + TypeScript backend starter. Clone, run, ship.**
 
+**[📖 Documentation](https://dvd90.github.io/chassis/)** · [Getting started](https://dvd90.github.io/chassis/#getting-started) · [create-chassis on npm](https://www.npmjs.com/package/create-chassis)
+
 Chassis gives you NestJS-style controller ergonomics on plain Express 5 — in a handful of small files you can actually read. Zero configuration required: the server boots standalone, and every integration switches on only when you add its environment variable. Scaffold with a preset or pick à la carte — a database (Mongo, Postgres, or SQLite, ORM included), an auth provider (Auth0, JWT, or Clerk), an optional Next.js front end, Sentry, an MCP server, and x402 payments — and the CLI ships only what you chose.
 
 ```ts
@@ -119,7 +121,9 @@ src/
 
 ## Documentation
 
-Full docs live in [`docs/`](docs/README.md):
+Read them at **[dvd90.github.io/chassis](https://dvd90.github.io/chassis/)** —
+searchable, one page. The source lives in [`docs/`](docs/README.md) and the site
+is generated from it, so the two can never disagree:
 
 - **[Getting started](docs/getting-started.md)** — step-by-step tutorial
 - **Guides** — [building an API](docs/guides/building-an-api.md) · [authentication](docs/guides/authentication.md) · [deployment](docs/guides/deployment.md)

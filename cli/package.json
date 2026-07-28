@@ -1,7 +1,8 @@
 {
   "name": "create-chassis",
   "version": "0.2.1",
-  "description": "Scaffold a production-ready Express 5 + TypeScript backend — pick a database + ORM (Postgres/SQLite/Drizzle or Mongo/Mongoose), auth (Auth0/JWT/Clerk), Sentry, an MCP server, and x402 payments, and get a project with only what you chose. AI-agent ready.",
+  "description": "Scaffold a production-ready Express 5 + TypeScript backend \u2014 pick a database + ORM (Postgres/SQLite/Drizzle or Mongo/Mongoose), auth (Auth0/JWT/Clerk), an optional Next.js front end, Sentry, an MCP server, and x402 payments, and get a project with only what you chose. AI-agent ready.",
+  "homepage": "https://dvd90.github.io/chassis/",
   "type": "module",
   "bin": {
     "create-chassis": "index.mjs"
@@ -46,7 +47,13 @@
     "payments",
     "ai-agent",
     "agents",
-    "llm"
+    "llm",
+    "nextjs",
+    "next",
+    "react",
+    "fullstack",
+    "monorepo",
+    "workspaces"
   ],
   "repository": {
     "type": "git",
@@ -54,5 +61,8 @@
     "directory": "cli"
   },
   "author": "dvd90",
-  "license": "MIT"
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dvd90/chassis/issues"
+  }
 }
