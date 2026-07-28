@@ -281,7 +281,11 @@ const IGNORE = new Set([
   'dist',
   'coverage',
   'cli',
-  'site', // the Chassis docs site — template-only, like cli/
+  // Template-only siblings of cli/. Matched by basename, so these names must
+  // not collide with anything inside the template — `mcp` would have taken
+  // `src/mcp` with it, which is why the directory is `mcp-server`.
+  'site',
+  'mcp-server',
   'package-lock.json'
 ]);
 

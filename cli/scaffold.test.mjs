@@ -317,6 +317,7 @@ function assertScaffold(dir, keptNames) {
     'docs/maintainers.md',
     'cli',
     'site',
+    'mcp-server',
     '.history',
     'node_modules',
     'package-lock.json'
