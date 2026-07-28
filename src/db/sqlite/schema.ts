@@ -9,3 +9,5 @@ export const examples = sqliteTable('examples', {
   name: text('name').notNull(),
   createdAt: text('created_at').notNull()
 });
+
+export * from './users.schema'; // chassis:jwt

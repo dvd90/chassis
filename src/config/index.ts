@@ -18,6 +18,8 @@ const envSchema = z.object({
   AUTH0_DOMAIN: z.string().optional(), // chassis:auth0
   AUTH0_AUDIENCE: z.string().optional(), // chassis:auth0
   JWT_SECRET: z.string().optional(), // chassis:jwt
+  AUTH_DEV_EMAIL: z.string().optional(), // chassis:jwt
+  AUTH_DEV_PASSWORD: z.string().optional(), // chassis:jwt
   CLERK_SECRET_KEY: z.string().optional(), // chassis:clerk
   SENTRY_DSN: z.string().optional(), // chassis:sentry
   X402_PAY_TO: z.string().optional(), // chassis:x402
@@ -50,6 +52,7 @@ export const config = {
   sqlite: { path: env.SQLITE_PATH ?? ':memory:' }, // chassis:sqlite
   auth0: { domain: env.AUTH0_DOMAIN, audience: env.AUTH0_AUDIENCE }, // chassis:auth0
   jwt: { secret: env.JWT_SECRET }, // chassis:jwt
+  authDev: { email: env.AUTH_DEV_EMAIL, password: env.AUTH_DEV_PASSWORD }, // chassis:jwt
   clerk: { secretKey: env.CLERK_SECRET_KEY }, // chassis:clerk
   sentry: { dsn: env.SENTRY_DSN }, // chassis:sentry
   x402: { payTo: env.X402_PAY_TO, network: env.X402_NETWORK }, // chassis:x402

@@ -5,3 +5,4 @@
  */
 export * from './Status.controller';
 export * from './Health.controller';
+export * from './Auth.controller'; // chassis:jwt

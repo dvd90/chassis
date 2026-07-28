@@ -72,18 +72,52 @@ secret:
 JWT_SECRET=a-long-random-string
 ```
 
-`src/integrations/jwt.ts` verifies `Authorization: Bearer <token>` (HS256)
-with [jose](https://github.com/panva/jose). Chassis verifies tokens; _issuing_
-them is app-specific — sign with the same secret:
+Unlike the hosted providers, this one has no user directory behind it — so
+Chassis ships the missing half: `src/controllers/Auth.controller.ts` mints
+tokens that `src/integrations/jwt.ts` then verifies (HS256, via
+[jose](https://github.com/panva/jose)).
 
-```ts
-import { SignJWT } from 'jose';
+```bash
+curl localhost:8000/auth/register -H 'content-type: application/json' \
+  -d '{"email":"dev@example.com","password":"correct-horse-42"}'
+# → 201 { "user": { "id": "1", "email": "dev@example.com" }, "token": "eyJ..." }
 
-const token = await new SignJWT({ sub: user.id })
-  .setProtectedHeader({ alg: 'HS256' })
-  .setExpirationTime('1h')
-  .sign(new TextEncoder().encode(process.env.JWT_SECRET));
+curl localhost:8000/auth/login -H 'content-type: application/json' \
+  -d '{"email":"dev@example.com","password":"correct-horse-42"}'
+# → 200 { "user": {...}, "token": "eyJ..." }
 ```
+
+Passwords are hashed with **scrypt** from Node's `node:crypto` — a
+memory-hard KDF in the standard library, so there is no argon2/bcrypt
+dependency and no native build (`src/utils/password.ts`).
+
+### Where users are stored
+
+`src/db/users.ts` resolves the store the same way integrations resolve
+themselves — by feature flag, at call time:
+
+| Configured database | Store                                                         |
+| ------------------- | ------------------------------------------------------------- |
+| SQLite / Postgres   | Drizzle `users` table (`src/db/<db>/users.ts`)                |
+| MongoDB             | Mongoose `User` model (`src/db/mongo/users.ts`)               |
+| _none_              | in-memory, seeded from `AUTH_DEV_EMAIL` / `AUTH_DEV_PASSWORD` |
+
+Pick a database and the store follows it — no code change. The in-memory
+fallback exists so `--auth jwt --db none` still boots and logs in during
+development; it is process-local and forgets everything on restart. Add a
+database before putting local JWT in front of real users.
+
+With Drizzle, generate the migration for the `users` table before first
+use:
+
+```bash
+npx drizzle-kit generate --config src/db/sqlite/drizzle.config.ts
+```
+
+Tokens are access tokens only, valid for one hour — there is no refresh
+rotation. Clients re-authenticate when a token expires; add a refresh
+endpoint alongside `/auth/login` if you need sessions to outlive that
+without a password prompt.
 
 ## Option C — Clerk (built in)
 
@@ -126,6 +160,31 @@ Then register it in `src/integrations/index.ts` behind a feature flag,
 exactly like the built-ins (the pattern is documented in
 [Modules](../modules.md)). Every `@protectedRoute` in the app now uses
 your provider — controllers don't change at all.
+
+## From the browser
+
+If you scaffolded the Next.js front end (`--web`), the same three
+providers have a matching web half in `apps/web/auth/providers/`. All of
+them do one job — hand `apiFetch` a bearer token for the API — behind one
+function, `getAccessToken()`:
+
+| Provider | Web package           | How the token is obtained                                               |
+| -------- | --------------------- | ----------------------------------------------------------------------- |
+| `jwt`    | _(none)_              | sign-in form → `/api/session` → API `/auth/login` → **httpOnly cookie** |
+| `auth0`  | `@auth0/nextjs-auth0` | hosted login → SDK session → `getAccessToken()`                         |
+| `clerk`  | `@clerk/nextjs`       | `<SignIn/>` → `auth().getToken()`                                       |
+
+Two notes that cost people hours:
+
+- **Auth0 needs an audience.** `apps/web/auth/providers/auth0.shared.ts`
+  passes `authorizationParameters.audience`. Without it Auth0 returns an
+  ID token rather than an API access token, and every `@protectedRoute`
+  call is rejected. It must match `AUTH0_AUDIENCE` on the API exactly.
+- **The local-JWT token never touches client JavaScript.** The form posts
+  to a Next route handler, which calls the API server-side and returns the
+  token only as an httpOnly cookie — so an injected script cannot read it.
+
+See [Web front end](web.md) for the full picture.
 
 ## How it works (and why 501)
 
