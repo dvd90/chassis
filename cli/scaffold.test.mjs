@@ -316,6 +316,7 @@ function assertScaffold(dir, keptNames) {
   for (const gone of [
     'docs/maintainers.md',
     'cli',
+    'site',
     '.history',
     'node_modules',
     'package-lock.json'

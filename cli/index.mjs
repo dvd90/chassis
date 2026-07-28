@@ -281,6 +281,7 @@ const IGNORE = new Set([
   'dist',
   'coverage',
   'cli',
+  'site', // the Chassis docs site — template-only, like cli/
   'package-lock.json'
 ]);
 

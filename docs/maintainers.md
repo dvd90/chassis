@@ -83,6 +83,35 @@ one provider, so a provider that drifts out of shape would otherwise break
 only for whoever picked it. **Adding an auth provider means adding it
 there too.**
 
+## The documentation site
+
+`site/` builds the published docs from the markdown in this repo — one
+self-contained `dist/index.html` with sidebar nav, client-side search and
+highlighted code, no server required.
+
+```bash
+npm ci --prefix site
+npm run build --prefix site     # then open site/dist/index.html
+npm run check --prefix site     # build without writing (what CI runs)
+```
+
+It holds **no prose of its own**: every page is rendered from `docs/**`,
+`README.md` and `AGENTS.md`, so the site cannot drift from the repo. Adding
+a doc means adding it to `site/pages.mjs` — the build fails on any markdown
+file under `docs/` that no section lists, so a page can never be published
+without a way to reach it.
+
+Like `cli/`, `site/` is template-only: it is in the CLI's ignore list and
+never reaches a generated project, and a scaffold test asserts that. Its
+`marked` dependency therefore never lands in anyone's `package.json`.
+
+Pushing to `master` publishes it via `.github/workflows/docs.yml`. That
+needs **Settings → Pages → Source: GitHub Actions** enabled once.
+
+The stylesheet in `site/theme.mjs` duplicates the tokens from
+`web/app/globals.css` on purpose — the web app is a template that gets
+copied into user projects, so it must not import from this build.
+
 ## Routine maintenance
 
 ### Weekly-ish
