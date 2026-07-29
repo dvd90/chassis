@@ -1,0 +1,19 @@
+# Paths that belong to the Chassis repository but never to a generated
+# project. create-chassis reads this file from the template it downloads.
+#
+# That matters because the CLI is versioned separately from the template it
+# fetches: a CLI published last month still downloads today's master. When the
+# exclusion list lived only in the CLI, adding a top-level directory leaked it
+# into every project made by every already-published version. Declaring it here
+# fixes all of them at once, with no CLI release.
+#
+# A bare name matches any file or directory with that basename.
+# An entry containing "/" matches a path relative to the repository root.
+
+# Published alongside the template, but not part of it.
+cli
+site
+mcp-server
+
+# Deploys the Chassis documentation site; a generated project has no site/.
+.github/workflows/docs.yml
