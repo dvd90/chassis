@@ -537,6 +537,89 @@ test('catalog: every auth provider file is claimed by exactly one provider', () 
   }
 });
 
+/** Repository-only paths the template declares for itself. */
+function chassisIgnore() {
+  const declared = new Set();
+  for (const raw of fs
+    .readFileSync(path.join(repoRoot, '.chassisignore'), 'utf8')
+    .split('\n')) {
+    const entry = raw.replace(/#.*$/, '').trim();
+    if (entry) declared.add(entry);
+  }
+  return declared;
+}
+
+test('catalog: every committed top-level path is classified', () => {
+  // The CLI is versioned separately from the template it downloads, so a
+  // release from months ago still fetches today's master. A new top-level
+  // directory therefore leaks into projects made by every already-published
+  // version — which is exactly how `mcp-server/` shipped in 0.3.0. Matched
+  // CLI+template tests cannot see that; this can.
+  const tracked = spawnSync('git', ['ls-tree', '--name-only', 'HEAD'], {
+    cwd: repoRoot,
+    encoding: 'utf8'
+  })
+    .stdout.trim()
+    .split('\n')
+    .filter(Boolean);
+
+  // Everything a generated project may legitimately contain. `web` is here
+  // because it ships with --web and is pruned otherwise.
+  const SHIPS = new Set([
+    '.chassisignore',
+    '.claude',
+    '.cursor',
+    '.dockerignore',
+    '.env.example',
+    '.github',
+    '.gitignore',
+    '.husky',
+    '.prettierignore',
+    '.prettierrc',
+    '.vscode',
+    'AGENTS.md',
+    'CLAUDE.md',
+    'Dockerfile',
+    'LICENSE',
+    'README.md',
+    'docker-compose.yml',
+    'docs',
+    'eslint.config.mjs',
+    'llms.txt',
+    'package.json',
+    'renovate.json',
+    'scripts',
+    'src',
+    'tsconfig.build.json',
+    'tsconfig.json',
+    'vitest.config.ts',
+    'web'
+  ]);
+
+  // Stripped by the CLI regardless of the template's declarations.
+  const ALWAYS_STRIPPED = new Set(['package-lock.json']);
+
+  const declared = chassisIgnore();
+  for (const entry of tracked) {
+    assert.ok(
+      SHIPS.has(entry) || declared.has(entry) || ALWAYS_STRIPPED.has(entry),
+      `"${entry}" is neither in this test's shipped list nor declared in ` +
+        `.chassisignore — a new top-level path must be classified, or it ` +
+        `leaks into projects made by already-published CLI versions`
+    );
+  }
+});
+
+test('catalog: .chassisignore covers the template-only siblings', () => {
+  const declared = chassisIgnore();
+  for (const entry of ['cli', 'site', 'mcp-server']) {
+    assert.ok(
+      declared.has(entry),
+      `${entry} must be in .chassisignore, not only in the CLI's ignore list`
+    );
+  }
+});
+
 test('catalog: presets reference real variants and every module', () => {
   const moduleKeys = Object.keys(MODULES).sort();
   for (const [name, preset] of Object.entries(PRESETS)) {

@@ -42,13 +42,13 @@ jobs:
       - name: Module catalog & CLI contract
         run: node --test cli/scaffold.test.mjs
 
-      # Template-only: the docs site builds from docs/**, so a renamed or
-      # unlisted page breaks here rather than on the Pages deploy. # chassis:template
+      # Template-only: a renamed or unlisted doc breaks here, # chassis:template
+      # not on the Pages deploy. # chassis:template
       - name: Docs site builds # chassis:template
         run: npm ci --prefix site && npm run check --prefix site # chassis:template
 
-      # Template-only: chassis-mcp is published separately and drives the CLI
-      # over stdio, so a change to the module catalog breaks it here. # chassis:template
+      # Template-only: chassis-mcp drives the CLI over stdio, so a # chassis:template
+      # change to the module catalog breaks it here. # chassis:template
       - name: chassis-mcp # chassis:template
         run: npm ci --prefix mcp-server && npm test --prefix mcp-server # chassis:template
 
