@@ -525,6 +525,44 @@ const extras = [
   ]
 ];
 
+// ── Self-checks ─────────────────────────────────────────────
+// A docs site that silently drops a link is worse than one that fails to
+// build, so these are build errors rather than warnings.
+
+// Markup only: the inlined client script builds hrefs by concatenation, and
+// those fragments are not links to check.
+const markup = html.replace(/<script[\s\S]*?<\/script>/g, '');
+
+const deadLinks = [...markup.matchAll(/href="([^"]*\.md[^"]*)"/g)]
+  .map((m) => m[1])
+  .filter((href) => !href.startsWith('http'));
+if (deadLinks.length) {
+  fail(
+    `these markdown links were not rewritten to in-page anchors, so they ` +
+      `404 on the site:\n  ${[...new Set(deadLinks)].join('\n  ')}`
+  );
+}
+
+const anchors = new Set(
+  [...markup.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1])
+);
+const brokenAnchors = [...markup.matchAll(/href="#([^"]+)"/g)]
+  .map((m) => m[1])
+  .filter((id) => id !== 'top' && !anchors.has(id));
+if (brokenAnchors.length) {
+  fail(
+    `these in-page links point at ids that do not exist:\n  ` +
+      `${[...new Set(brokenAnchors)].join('\n  ')}`
+  );
+}
+
+for (const [name, body] of extras) {
+  if (body.trim().length < 40) fail(`${name} came out empty`);
+}
+if (!llmsTxt.includes(SITE)) {
+  fail('llms.txt links were not rewritten to absolute site URLs');
+}
+
 const kb = (n) => `${(n / 1024).toFixed(0)} kB`;
 const summary =
   `${pages.length} pages · ${searchIndex.length} search entries · ` +

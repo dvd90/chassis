@@ -15,5 +15,7 @@ cli
 site
 mcp-server
 
-# Deploys the Chassis documentation site; a generated project has no site/.
+# Chassis's own CI concerns; a generated project has neither site/ nor a
+# published CLI to check itself against.
 .github/workflows/docs.yml
+.github/workflows/published.yml

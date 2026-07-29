@@ -318,11 +318,32 @@ function assertScaffold(dir, keptNames) {
     'cli',
     'site',
     'mcp-server',
+    // Declared by path rather than basename in .chassisignore — a generated
+    // project has no site/, so this workflow would fail on its first push.
+    '.github/workflows/docs.yml',
+    '.chassisignore',
     '.history',
     'node_modules',
     'package-lock.json'
   ]) {
     assert.ok(!fs.existsSync(path.join(dir, gone)), `shipped ${gone}`);
+  }
+
+  // Docker has to point at wherever the API actually ended up.
+  const compose = path.join(dir, 'docker-compose.yml');
+  if (fs.existsSync(compose)) {
+    const yaml = fs.readFileSync(compose, 'utf8');
+    assert.match(
+      yaml,
+      monorepo ? /build: \.\/apps\/api/ : /build: \./,
+      'compose build context does not match the layout'
+    );
+    const dockerfile = path.join(dir, monorepo ? MONOREPO.apiDir : '.', 'Dockerfile'); // prettier-ignore
+    if (monorepo && fs.existsSync(dockerfile)) {
+      // The workspace lockfile lives at the repo root, outside this build
+      // context, so `npm ci` cannot work here.
+      assert.doesNotMatch(fs.readFileSync(dockerfile, 'utf8'), /npm ci/);
+    }
   }
 
   // Every generated project carries its conventions in each agent's own
@@ -355,6 +376,11 @@ function assertScaffold(dir, keptNames) {
       `${doc} links to the deleted maintainers guide`
     );
   }
+}
+
+/** Does this selection produce the apps/api + apps/web layout? */
+function monorepoLayout(keptNames) {
+  return keptNames.includes('web');
 }
 
 function npm(args, dir) {
@@ -729,29 +755,45 @@ test('cli: --help documents every preset, choice and toggle', () => {
 
 // ── Structural cases (fast, no install) ─────────────────────
 
+// Presets and toggles. The db × auth × web matrix is generated exhaustively
+// below rather than sampled here, so a combination cannot be missed.
 const structural = [
   { label: 'bare (minimal)', flags: ['--bare'], kept: [] },
-  { label: 'db mongo', flags: ['--preset', 'minimal', '--db', 'mongo'], kept: ['mongo'] }, // prettier-ignore
-  { label: 'db postgres', flags: ['--preset', 'minimal', '--db', 'postgres'], kept: ['postgres'] }, // prettier-ignore
-  { label: 'db sqlite', flags: ['--preset', 'minimal', '--db', 'sqlite'], kept: ['sqlite'] }, // prettier-ignore
-  { label: 'auth auth0', flags: ['--preset', 'minimal', '--auth', 'auth0'], kept: ['auth0'] }, // prettier-ignore
-  { label: 'auth jwt', flags: ['--preset', 'minimal', '--auth', 'jwt'], kept: ['jwt'] }, // prettier-ignore
-  { label: 'auth clerk', flags: ['--preset', 'minimal', '--auth', 'clerk'], kept: ['clerk'] }, // prettier-ignore
   { label: 'toggle sentry', flags: ['--preset', 'minimal', '--sentry'], kept: ['sentry'] }, // prettier-ignore
   { label: 'toggle mcp', flags: ['--preset', 'minimal', '--mcp'], kept: ['mcp'] }, // prettier-ignore
   { label: 'toggle x402', flags: ['--preset', 'minimal', '--x402'], kept: ['x402'] }, // prettier-ignore
+  { label: 'every toggle at once', flags: ['--preset', 'minimal', '--db', 'postgres', '--auth', 'jwt', '--sentry', '--mcp', '--x402', '--web', '--docker'], kept: ['postgres', 'jwt', 'sentry', 'mcp', 'x402', 'web'] }, // prettier-ignore
   { label: 'preset lite', flags: ['--preset', 'lite'], kept: ['sqlite', 'jwt'] }, // prettier-ignore
   { label: 'preset api', flags: ['--preset', 'api'], kept: ['postgres', 'jwt', 'sentry'] }, // prettier-ignore
-  { label: '--yes (api default)', flags: ['--yes'], kept: ['postgres', 'jwt', 'sentry'] }, // prettier-ignore
-  // Every auth provider, with and without the front end — the full matrix
-  // the monorepo restructure has to survive.
-  { label: 'web + auth none', flags: ['--preset', 'minimal', '--web'], kept: ['web'] }, // prettier-ignore
-  { label: 'web + auth jwt', flags: ['--preset', 'minimal', '--web', '--auth', 'jwt'], kept: ['web', 'jwt'] }, // prettier-ignore
-  { label: 'web + auth auth0', flags: ['--preset', 'minimal', '--web', '--auth', 'auth0'], kept: ['web', 'auth0'] }, // prettier-ignore
-  { label: 'web + auth clerk', flags: ['--preset', 'minimal', '--web', '--auth', 'clerk'], kept: ['web', 'clerk'] }, // prettier-ignore
-  { label: 'web + jwt + sqlite', flags: ['--preset', 'minimal', '--web', '--auth', 'jwt', '--db', 'sqlite'], kept: ['web', 'jwt', 'sqlite'] }, // prettier-ignore
-  { label: 'preset fullstack', flags: ['--preset', 'fullstack'], kept: ['postgres', 'jwt', 'sentry', 'web'] } // prettier-ignore
+  { label: 'preset fullstack', flags: ['--preset', 'fullstack'], kept: ['postgres', 'jwt', 'sentry', 'web'] }, // prettier-ignore
+  { label: '--yes (api default)', flags: ['--yes'], kept: ['postgres', 'jwt', 'sentry'] } // prettier-ignore
 ];
+
+// The full db × auth × web matrix. Sampling this is how `--auth jwt --db none`
+// shipped broken: the bug was in a combination, not in any single module.
+for (const db of Object.keys(GROUPS.db.variants)) {
+  for (const auth of Object.keys(GROUPS.auth.variants)) {
+    for (const web of [false, true]) {
+      structural.push({
+        label: `matrix: db=${db} auth=${auth}${web ? ' +web' : ''}`,
+        flags: [
+          '--preset',
+          'minimal',
+          '--db',
+          db,
+          '--auth',
+          auth,
+          ...(web ? ['--web'] : [])
+        ],
+        kept: [
+          ...(db === 'none' ? [] : [db]),
+          ...(auth === 'none' ? [] : [auth]),
+          ...(web ? ['web'] : [])
+        ]
+      });
+    }
+  }
+}
 
 for (const { label, flags, kept } of structural) {
   test(`structural: ${label}`, () => {
@@ -919,7 +961,7 @@ const build = [
   { label: 'web + no auth', flags: ['--preset', 'minimal', '--web'], kept: ['web'], db: null } // prettier-ignore
 ];
 
-for (const { label, flags, kept, db } of build) {
+for (const [buildIndex, { label, flags, kept, db }] of build.entries()) {
   test(
     `build: ${label}`,
     { skip: !process.env.SCAFFOLD_BUILD, timeout: 600_000 },
@@ -943,6 +985,33 @@ for (const { label, flags, kept, db } of build) {
         // that exercises middleware and edge bundling per auth provider.
         const build = npm(['run', 'build'], dir);
         assert.equal(build.status, 0, `build failed:\n${build.stdout}\n${build.stderr}`); // prettier-ignore
+
+        // Compiling is not running. Nothing above would notice a scaffold
+        // that builds cleanly and then dies on boot — a bad import order, a
+        // config schema that rejects its own defaults, a missing dist file.
+        const port = 8100 + buildIndex;
+        const apiDir = path.join(dir, monorepoLayout(kept) ? MONOREPO.apiDir : ''); // prettier-ignore
+        const boot = spawnSync(
+          'bash',
+          [
+            '-c',
+            `cd "${apiDir}" && PORT=${port} node dist/server.js >boot.log 2>&1 &
+             pid=$!
+             ok=0
+             for _ in $(seq 1 80); do
+               if curl -sf "http://127.0.0.1:${port}/status" >/dev/null; then ok=1; break; fi
+               sleep 0.25
+             done
+             kill $pid 2>/dev/null
+             if [ $ok -ne 1 ]; then cat boot.log; exit 1; fi`
+          ],
+          { encoding: 'utf8', timeout: 90_000 }
+        );
+        assert.equal(
+          boot.status,
+          0,
+          `the built server never answered /status:\n${boot.stdout}\n${boot.stderr}`
+        );
 
         // The DB-aware generator must produce code that still verifies.
         if (db) {

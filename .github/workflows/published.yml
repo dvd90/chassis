@@ -1,0 +1,71 @@
+name: Published CLI
+
+# Answers a question no other job can: does the create-chassis that is on npm
+# *right now* produce a clean project from the template on this branch?
+#
+# The CLI is versioned separately from the template it downloads, so a release
+# from months ago still fetches today's master. Every other test runs a matched
+# CLI + template pair and is therefore blind to that skew — which is how
+# `mcp-server/` shipped into every project made by 0.3.0.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  schedule:
+    # Catches drift introduced by a template change that never touched the CLI.
+    - cron: '0 7 * * 1'
+  workflow_dispatch:
+
+jobs:
+  skew:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Scaffold with the published CLI and this template
+        run: |
+          npx --yes create-chassis@latest /tmp/skew \
+            --bare --no-install --no-git
+
+      - name: Assert nothing repository-only leaked
+        run: |
+          node --input-type=module -e '
+            import fs from "node:fs";
+            import path from "node:path";
+
+            const declared = fs.readFileSync(".chassisignore", "utf8")
+              .split("\n")
+              .map((l) => l.replace(/#.*$/, "").trim())
+              .filter(Boolean);
+
+            const leaked = declared.filter((p) =>
+              fs.existsSync(path.join("/tmp/skew", p))
+            );
+
+            if (leaked.length) {
+              console.error(
+                "✖ the published CLI shipped repository-only paths:\n  " +
+                  leaked.join("\n  ") +
+                  "\n\nThe CLI on npm predates these declarations. Publish a " +
+                  "patch release of create-chassis so it reads .chassisignore."
+              );
+              process.exit(1);
+            }
+            console.log("✔ published CLI produces a clean project");
+          '
+
+      - name: Assert the generated project has no dangling template references
+        run: |
+          if grep -rlE "chassis:[a-z]+\s*$" /tmp/skew --include="*.ts" \
+               --include="*.mjs" --include="*.yml" --include="*.json" ; then
+            echo "::error::leftover chassis: markers in the generated project"
+            exit 1
+          fi
+          echo "no marker residue"
