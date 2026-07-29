@@ -317,11 +317,24 @@ function assertScaffold(dir, keptNames) {
     'docs/maintainers.md',
     'cli',
     'site',
+    'mcp-server',
     '.history',
     'node_modules',
     'package-lock.json'
   ]) {
     assert.ok(!fs.existsSync(path.join(dir, gone)), `shipped ${gone}`);
+  }
+
+  // Every generated project carries its conventions in each agent's own
+  // format — that is what keeps the code an agent writes idiomatic.
+  for (const guide of [
+    'AGENTS.md',
+    'CLAUDE.md',
+    'llms.txt',
+    '.cursor/rules/chassis.mdc',
+    '.github/copilot-instructions.md'
+  ]) {
+    assert.ok(fs.existsSync(path.join(dir, guide)), `missing ${guide}`);
   }
 
   assert.equal(rootPkg.name, path.basename(dir), 'project name');

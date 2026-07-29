@@ -1,5 +1,19 @@
 # MCP server
 
+There are two, and they do opposite things:
+
+|                                                                | What it exposes                                          |
+| -------------------------------------------------------------- | -------------------------------------------------------- |
+| **`--mcp` module** (this page)                                 | _your_ API, as tools an agent can call                   |
+| **[`chassis-mcp`](https://www.npmjs.com/package/chassis-mcp)** | Chassis itself — an agent calls it to _create_ a project |
+
+If you want an agent to scaffold Chassis projects for you, that's the second
+one; point your client at `npx -y chassis-mcp` and it gains
+`list_chassis_options`, `create_chassis_project` and `chassis_conventions`.
+The rest of this page is about the first.
+
+---
+
 The MCP module (`--mcp`) exposes your API to AI agents as
 [Model Context Protocol](https://modelcontextprotocol.io) tools. It runs as a
 **separate stdio process** — the way agent clients (Claude Desktop, etc.)

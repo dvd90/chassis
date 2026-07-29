@@ -112,6 +112,31 @@ The stylesheet in `site/theme.mjs` duplicates the tokens from
 `web/app/globals.css` on purpose — the web app is a template that gets
 copied into user projects, so it must not import from this build.
 
+## chassis-mcp
+
+`mcp-server/` is published separately as
+[`chassis-mcp`](https://www.npmjs.com/package/chassis-mcp): an MCP server that
+scaffolds Chassis projects, so an agent can create one without knowing the
+CLI's flags.
+
+```bash
+npm ci --prefix mcp-server
+npm test --prefix mcp-server    # drives it over stdio, like a real client
+```
+
+It **imports the option catalog from `create-chassis`** rather than restating
+it, so it cannot advertise a stack the CLI does not support — and its tests run
+against the CLI in this checkout via `CHASSIS_CLI`, so a change to
+`cli/modules.mjs` fails here rather than in someone's agent.
+
+Like `cli/` and `site/`, it is template-only and never reaches a generated
+project. Note the directory is `mcp-server`, not `mcp`: the CLI's ignore list
+matches by **basename**, so a top-level `mcp/` would also have excluded
+`src/mcp` and silently broken the `--mcp` module.
+
+Releasing it follows the same shape as the CLI — bump `mcp-server/package.json`,
+`npm publish` from that directory, tag `mcp-v<version>`.
+
 ## Routine maintenance
 
 ### Weekly-ish
@@ -130,7 +155,7 @@ copied into user projects, so it must not import from this build.
     line by Prettier, and pruning then deletes the body but keeps the
     declaration. Put the construct in its own file and mark the import.
   - A module name must not appear as `chassis:<name>` anywhere else in the
-    template. Pruning drops any line *containing* the string, so naming a
+    template. Pruning drops any line _containing_ the string, so naming a
     module `routes` would delete `Symbol('chassis:routes')` from
     `src/core/routable.ts`.
 - After touching integrations or markers, run the scaffold suite:

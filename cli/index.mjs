@@ -281,7 +281,11 @@ const IGNORE = new Set([
   'dist',
   'coverage',
   'cli',
-  'site', // the Chassis docs site — template-only, like cli/
+  // Template-only siblings of cli/. Matched by basename, so these names must
+  // not collide with anything inside the template — `mcp` would have taken
+  // `src/mcp` with it, which is why the directory is `mcp-server`.
+  'site',
+  'mcp-server',
   'package-lock.json'
 ]);
 
@@ -600,7 +604,13 @@ function restructureToMonorepo(webDir) {
     `> **Layout:** this project is an npm-workspaces monorepo. The API lives\n` +
     `> in \`${MONOREPO.apiDir}/\` — read every \`src/...\` path below as\n` +
     `> \`${MONOREPO.apiDir}/src/...\`. The Next.js front end is in \`${MONOREPO.webDir}/\`.\n\n`;
-  for (const doc of ['AGENTS.md', 'CLAUDE.md', 'README.md']) {
+  for (const doc of [
+    'AGENTS.md',
+    'CLAUDE.md',
+    'README.md',
+    '.cursor/rules/chassis.mdc',
+    '.github/copilot-instructions.md'
+  ]) {
     const full = path.join(targetDir, doc);
     if (!fs.existsSync(full)) continue;
     const body = fs.readFileSync(full, 'utf8');
@@ -647,7 +657,7 @@ console.log(
     : `${green('✔')} Standalone build — no external services required`
 );
 console.log(
-  `${green('✔')} AI-agent ready ${dim('(AGENTS.md, CLAUDE.md, llms.txt, add-resource skill)')}`
+  `${green('✔')} AI-agent ready ${dim('(AGENTS.md, CLAUDE.md, Cursor + Copilot rules, llms.txt, add-resource skill)')}`
 );
 
 console.log(`\nNext steps:\n`);
