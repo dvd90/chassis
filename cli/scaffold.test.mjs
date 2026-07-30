@@ -339,10 +339,15 @@ function assertScaffold(dir, keptNames) {
       'compose build context does not match the layout'
     );
     const dockerfile = path.join(dir, monorepo ? MONOREPO.apiDir : '.', 'Dockerfile'); // prettier-ignore
-    if (monorepo && fs.existsSync(dockerfile)) {
-      // The workspace lockfile lives at the repo root, outside this build
-      // context, so `npm ci` cannot work here.
-      assert.doesNotMatch(fs.readFileSync(dockerfile, 'utf8'), /npm ci/);
+    if (fs.existsSync(dockerfile)) {
+      // A fresh scaffold has no lockfile — the CLI strips the template's — and
+      // in a monorepo the workspace lockfile is outside this build context.
+      // Either way an unconditional `npm ci` cannot work.
+      assert.match(
+        fs.readFileSync(dockerfile, 'utf8'),
+        /if \[ -f package-lock\.json \]/,
+        'Dockerfile must build with or without a lockfile'
+      );
     }
   }
 
@@ -642,6 +647,43 @@ test('catalog: .chassisignore covers the template-only siblings', () => {
     assert.ok(
       declared.has(entry),
       `${entry} must be in .chassisignore, not only in the CLI's ignore list`
+    );
+  }
+});
+
+test('catalog: every module the CLI imports is actually published', () => {
+  // npm ships only what `files` lists. A new local import that nobody added
+  // there produces a CLI that works in this repo and crashes on npx with
+  // ERR_MODULE_NOT_FOUND — invisible to every test that runs from source.
+  const cliPkg = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'cli', 'package.json'), 'utf8')
+  );
+  const published = new Set(cliPkg.files ?? []);
+
+  const seen = new Set();
+  const queue = ['index.mjs'];
+  while (queue.length) {
+    const file = queue.shift();
+    if (seen.has(file)) continue;
+    seen.add(file);
+
+    const source = fs.readFileSync(path.join(repoRoot, 'cli', file), 'utf8');
+    for (const [, spec] of source.matchAll(/from\s+'(\.\/[^']+)'/g)) {
+      const target = spec.replace('./', '');
+      assert.ok(
+        published.has(target),
+        `cli/${file} imports "${spec}" but cli/package.json "files" does not ` +
+          `list it — the published package would crash on startup`
+      );
+      queue.push(target);
+    }
+  }
+
+  // And nothing is listed that does not exist.
+  for (const file of published) {
+    assert.ok(
+      fs.existsSync(path.join(repoRoot, 'cli', file)),
+      `cli/package.json publishes "${file}", which does not exist`
     );
   }
 });

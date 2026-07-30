@@ -1,6 +1,6 @@
 {
   "name": "create-chassis",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Scaffold a production-ready Express 5 + TypeScript backend \u2014 pick a database + ORM (Postgres/SQLite/Drizzle or Mongo/Mongoose), auth (Auth0/JWT/Clerk), an optional Next.js front end, Sentry, an MCP server, and x402 payments, and get a project with only what you chose. AI-agent ready.",
   "homepage": "https://dvd90.github.io/chassis/",
   "type": "module",
@@ -9,7 +9,8 @@
   },
   "files": [
     "index.mjs",
-    "modules.mjs"
+    "modules.mjs",
+    "select.mjs"
   ],
   "engines": {
     "node": ">=20"

@@ -16,7 +16,11 @@ The included `Dockerfile` is production-shaped out of the box:
 
 - **Multi-stage** — dev dependencies never reach the final image
 - **Non-root** — runs as the `node` user
-- **`npm ci`** — reproducible installs from the lockfile
+- **Lockfile-aware** — `npm ci` when a `package-lock.json` exists
+  (reproducible), `npm install` before then. A freshly scaffolded project has
+  no lockfile: the CLI strips the template's, since it lists dependencies your
+  project may not have kept. So `docker build` works immediately, and gets
+  reproducible the moment you run `npm install`.
 
 ```bash
 docker build -t my-api .

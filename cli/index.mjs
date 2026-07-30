@@ -20,6 +20,7 @@ import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import readline from 'node:readline/promises';
 import { MODULES, GROUPS, PRESETS, MONOREPO, descriptor } from './modules.mjs';
+import { resolveSelection } from './select.mjs';
 
 const REPO = 'dvd90/chassis';
 const TARBALL_URL = `https://codeload.github.com/${REPO}/tar.gz/HEAD`;
@@ -156,16 +157,6 @@ function validateChoice(flag, group) {
   return value;
 }
 
-function presetSelection(name) {
-  const preset = PRESETS[name] ?? PRESETS.api;
-  return {
-    db: preset.db,
-    auth: preset.auth,
-    modules: { ...preset.modules },
-    docker: preset.docker
-  };
-}
-
 let targetDir = positionals[0] ?? (await ask('Project directory?', 'my-api'));
 targetDir = path.resolve(targetDir);
 const projectName = path
@@ -186,63 +177,27 @@ if (presetFlag && !PRESETS[presetFlag]) {
   );
 }
 
-let sel;
-if (bare) {
-  sel = presetSelection('minimal');
-} else if (skipPrompts) {
-  sel = presetSelection(presetFlag ?? 'api');
-} else {
-  const preset = await choose(
-    'Choose a preset:',
-    [
-      ...Object.entries(PRESETS).map(([key, p]) => ({ key, label: p.label })),
-      { key: 'custom', label: 'Custom — pick each module' }
-    ],
-    presetFlag ?? 'api'
-  );
-  if (preset === 'custom') {
-    const dbChoice = await choose(
-      GROUPS.db.prompt,
-      Object.entries(GROUPS.db.variants).map(([key, v]) => ({
-        key,
-        label: v.label
-      })),
-      GROUPS.db.default
-    );
-    const authChoice = await choose(
-      GROUPS.auth.prompt,
-      Object.entries(GROUPS.auth.variants).map(([key, v]) => ({
-        key,
-        label: v.label
-      })),
-      GROUPS.auth.default
-    );
-    const modules = {};
-    for (const [key, mod] of Object.entries(MODULES)) {
-      modules[key] = await confirm(`Include ${bold(mod.label)}?`, false);
-    }
-    sel = {
-      db: dbChoice,
-      auth: authChoice,
-      modules,
-      docker: await confirm(
-        `Include ${bold('Docker')} (Dockerfile + compose)?`,
-        false
-      )
-    };
-  } else {
-    sel = presetSelection(preset);
-  }
+// Explicit flags are collected first; resolveSelection applies them over
+// whatever the preset or the prompts produced.
+const toggleFlags = {};
+for (const key of Object.keys(MODULES)) {
+  if (flags.has(key)) toggleFlags[key] = flags.get(key) !== false;
 }
 
-// Explicit flags always win over preset/prompt.
-sel.db = validateChoice('db', 'db') ?? sel.db;
-sel.auth = validateChoice('auth', 'auth') ?? sel.auth;
-for (const key of Object.keys(MODULES)) {
-  if (flags.has(key)) sel.modules[key] = flags.get(key) !== false;
-}
-if (flags.has('docker')) sel.docker = true;
-if (flags.has('no-docker')) sel.docker = false;
+const sel = await resolveSelection({
+  prompts: { choose, confirm, bold },
+  bare,
+  skipPrompts,
+  preset: presetFlag,
+  db: validateChoice('db', 'db'),
+  auth: validateChoice('auth', 'auth'),
+  toggles: toggleFlags,
+  docker: flags.has('docker')
+    ? true
+    : flags.has('no-docker')
+      ? false
+      : undefined
+});
 
 const withGit = flags.has('no-git')
   ? false
@@ -604,17 +559,6 @@ function restructureToMonorepo(webDir) {
     ) + '\n'
   );
 
-  // Docker builds from apps/api, which has no lockfile of its own — the
-  // workspace lockfile lives at the repo root.
-  const dockerfile = path.join(apiDir, 'Dockerfile');
-  if (fs.existsSync(dockerfile)) {
-    fs.writeFileSync(
-      dockerfile,
-      fs
-        .readFileSync(dockerfile, 'utf8')
-        .replace('npm ci --ignore-scripts', 'npm install --ignore-scripts')
-    );
-  }
   const compose = path.join(targetDir, 'docker-compose.yml');
   if (fs.existsSync(compose)) {
     fs.writeFileSync(
