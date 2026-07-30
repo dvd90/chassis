@@ -1,0 +1,75 @@
+name: Docker
+
+# The Dockerfile is generated, restructured for the monorepo layout, and
+# rewritten (`npm ci` -> `npm install`, because the workspace lockfile sits
+# outside apps/api's build context). Every other job asserts that as *text*.
+# This one actually builds both layouts.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'docker-compose.yml'
+      - 'cli/**'
+      - 'package.json'
+      - '.github/workflows/docker.yml'
+  pull_request:
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'docker-compose.yml'
+      - 'cli/**'
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: single package
+            flags: --preset api --docker
+            context: .
+          - name: monorepo
+            flags: --preset fullstack --docker
+            context: ./apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Scaffold (${{ matrix.name }})
+        env:
+          CHASSIS_TEMPLATE: ${{ github.workspace }}
+        run: |
+          node cli/index.mjs /tmp/docker-case \
+            ${{ matrix.flags }} --yes --no-install --no-git
+
+      - name: docker build
+        working-directory: /tmp/docker-case
+        run: docker build -t chassis-smoke ${{ matrix.context }}
+
+      - name: The image boots and answers /status
+        run: |
+          docker run -d --name smoke -p 8000:8000 chassis-smoke
+          for _ in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:8000/status >/dev/null; then
+              echo "✔ container answered /status"
+              docker rm -f smoke >/dev/null
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "::error::the container never answered /status"
+          docker logs smoke
+          docker rm -f smoke >/dev/null
+          exit 1

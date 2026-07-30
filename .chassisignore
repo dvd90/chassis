@@ -19,3 +19,4 @@ mcp-server
 # published CLI to check itself against.
 .github/workflows/docs.yml
 .github/workflows/published.yml
+.github/workflows/docker.yml

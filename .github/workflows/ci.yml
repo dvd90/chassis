@@ -40,7 +40,7 @@ jobs:
       # entry — both of which fail silently. Worth running here for fast
       # feedback rather than only in the slow scaffold job below.
       - name: Module catalog & CLI contract
-        run: node --test cli/scaffold.test.mjs
+        run: node --test cli/*.test.mjs
 
       # Template-only: a renamed or unlisted doc breaks here, # chassis:template
       # not on the Pages deploy. # chassis:template

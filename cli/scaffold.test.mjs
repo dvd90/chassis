@@ -646,6 +646,43 @@ test('catalog: .chassisignore covers the template-only siblings', () => {
   }
 });
 
+test('catalog: every module the CLI imports is actually published', () => {
+  // npm ships only what `files` lists. A new local import that nobody added
+  // there produces a CLI that works in this repo and crashes on npx with
+  // ERR_MODULE_NOT_FOUND — invisible to every test that runs from source.
+  const cliPkg = JSON.parse(
+    fs.readFileSync(path.join(repoRoot, 'cli', 'package.json'), 'utf8')
+  );
+  const published = new Set(cliPkg.files ?? []);
+
+  const seen = new Set();
+  const queue = ['index.mjs'];
+  while (queue.length) {
+    const file = queue.shift();
+    if (seen.has(file)) continue;
+    seen.add(file);
+
+    const source = fs.readFileSync(path.join(repoRoot, 'cli', file), 'utf8');
+    for (const [, spec] of source.matchAll(/from\s+'(\.\/[^']+)'/g)) {
+      const target = spec.replace('./', '');
+      assert.ok(
+        published.has(target),
+        `cli/${file} imports "${spec}" but cli/package.json "files" does not ` +
+          `list it — the published package would crash on startup`
+      );
+      queue.push(target);
+    }
+  }
+
+  // And nothing is listed that does not exist.
+  for (const file of published) {
+    assert.ok(
+      fs.existsSync(path.join(repoRoot, 'cli', file)),
+      `cli/package.json publishes "${file}", which does not exist`
+    );
+  }
+});
+
 test('catalog: presets reference real variants and every module', () => {
   const moduleKeys = Object.keys(MODULES).sort();
   for (const [name, preset] of Object.entries(PRESETS)) {

@@ -69,3 +69,8 @@ jobs:
             exit 1
           fi
           echo "no marker residue"
+
+      - name: The published chassis-mcp works end to end
+        run: |
+          npm ci --prefix mcp-server
+          node mcp-server/published-check.mjs
