@@ -559,17 +559,6 @@ function restructureToMonorepo(webDir) {
     ) + '\n'
   );
 
-  // Docker builds from apps/api, which has no lockfile of its own — the
-  // workspace lockfile lives at the repo root.
-  const dockerfile = path.join(apiDir, 'Dockerfile');
-  if (fs.existsSync(dockerfile)) {
-    fs.writeFileSync(
-      dockerfile,
-      fs
-        .readFileSync(dockerfile, 'utf8')
-        .replace('npm ci --ignore-scripts', 'npm install --ignore-scripts')
-    );
-  }
   const compose = path.join(targetDir, 'docker-compose.yml');
   if (fs.existsSync(compose)) {
     fs.writeFileSync(

@@ -77,7 +77,8 @@ cases, and the page re-checks. Middleware alone is never the guard.
 
 ## Docker
 
-`docker-compose.yml` builds the API from `apps/api`. The Dockerfile there
-uses `npm install` rather than `npm ci`, because the workspace lockfile
-lives at the repo root and is not part of that build context. The web app
-has no compose service — deploy it wherever you deploy Next.
+`docker-compose.yml` builds the API from `apps/api`. The Dockerfile falls
+back from `npm ci` to `npm install` when it finds no lockfile, which is what
+makes that build context work at all: in a workspaces monorepo the lockfile
+lives at the repo root, outside `apps/api`. The web app has no compose
+service — deploy it wherever you deploy Next.

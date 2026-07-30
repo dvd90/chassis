@@ -54,6 +54,10 @@ jobs:
           node cli/index.mjs /tmp/docker-case \
             ${{ matrix.flags }} --yes --no-install --no-git
 
+      # Plain `docker build` on a runner loads the image into the daemon. If
+      # you reproduce this locally with a `docker-container` buildx driver the
+      # result stays in the build cache instead, and `docker run` will say the
+      # image does not exist — add `--load` there.
       - name: docker build
         working-directory: /tmp/docker-case
         run: docker build -t chassis-smoke ${{ matrix.context }}

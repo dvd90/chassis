@@ -339,10 +339,15 @@ function assertScaffold(dir, keptNames) {
       'compose build context does not match the layout'
     );
     const dockerfile = path.join(dir, monorepo ? MONOREPO.apiDir : '.', 'Dockerfile'); // prettier-ignore
-    if (monorepo && fs.existsSync(dockerfile)) {
-      // The workspace lockfile lives at the repo root, outside this build
-      // context, so `npm ci` cannot work here.
-      assert.doesNotMatch(fs.readFileSync(dockerfile, 'utf8'), /npm ci/);
+    if (fs.existsSync(dockerfile)) {
+      // A fresh scaffold has no lockfile — the CLI strips the template's — and
+      // in a monorepo the workspace lockfile is outside this build context.
+      // Either way an unconditional `npm ci` cannot work.
+      assert.match(
+        fs.readFileSync(dockerfile, 'utf8'),
+        /if \[ -f package-lock\.json \]/,
+        'Dockerfile must build with or without a lockfile'
+      );
     }
   }
 
