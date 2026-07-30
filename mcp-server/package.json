@@ -1,6 +1,7 @@
 {
   "name": "chassis-mcp",
-  "version": "0.1.1",
+  "mcpName": "io.github.dvd90/chassis-mcp",
+  "version": "0.1.2",
   "description": "MCP server that scaffolds Chassis backends \u2014 an Express 5 + TypeScript starter with a database, auth and an optional Next.js front end. Lets an AI agent create a working, tested project in one tool call.",
   "homepage": "https://dvd90.github.io/chassis/",
   "type": "module",
