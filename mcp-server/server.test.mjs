@@ -192,3 +192,23 @@ test('server.json matches package.json', () => {
     'GitHub auth requires the io.github.<user>/ namespace'
   );
 });
+
+test('server.json fits the registry schema limits', () => {
+  // From the schema server.json points at. The registry enforces these on
+  // submit, so overrunning one fails at `mcp-publisher publish` — after the
+  // npm release that carried mcpName, which is the expensive place to find out.
+  const server = JSON.parse(fs.readFileSync(path.join(mcpDir, 'server.json'), 'utf8')); // prettier-ignore
+  const limits = { description: 100, name: 200, title: 100, version: 255 };
+
+  for (const [field, max] of Object.entries(limits)) {
+    const value = server[field];
+    if (value === undefined) continue;
+    assert.ok(
+      value.length <= max,
+      `server.json ${field} is ${value.length} chars, over the schema's ${max}`
+    );
+  }
+
+  assert.ok(server.description, 'description is required');
+  assert.equal(server.packages[0].transport.type, 'stdio');
+});
