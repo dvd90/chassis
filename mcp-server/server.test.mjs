@@ -166,3 +166,29 @@ test('chassis_conventions prefers a project AGENTS.md over the summary', async (
   assert.match(builtIn, /Chassis conventions/);
   assert.notEqual(fromProject, builtIn);
 });
+
+test('server.json matches package.json', () => {
+  // The MCP Registry reads server.json, npm reads package.json, and the
+  // registry rejects a submission whose versions disagree.
+  const pkg = JSON.parse(fs.readFileSync(path.join(mcpDir, 'package.json'), 'utf8')); // prettier-ignore
+  const server = JSON.parse(fs.readFileSync(path.join(mcpDir, 'server.json'), 'utf8')); // prettier-ignore
+
+  assert.equal(server.version, pkg.version, 'server.json version drifted');
+  assert.equal(
+    server.packages[0].version,
+    pkg.version,
+    'package entry drifted'
+  );
+  assert.equal(server.packages[0].identifier, pkg.name, 'package name drifted');
+  assert.equal(
+    server.name,
+    pkg.mcpName,
+    'server.json name must equal package.json mcpName — that pairing is how ' +
+      'the registry proves you own the npm package'
+  );
+  assert.match(
+    pkg.mcpName,
+    /^io\.github\.[\w-]+\//,
+    'GitHub auth requires the io.github.<user>/ namespace'
+  );
+});
