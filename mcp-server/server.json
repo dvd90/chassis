@@ -1,7 +1,8 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.dvd90/chassis-mcp",
-  "description": "Scaffold a production-ready Express 5 + TypeScript backend \u2014 pick a database, an auth provider and an optional Next.js front end, and get a project that typechecks, lints, tests and builds green.",
+  "title": "Chassis",
+  "description": "Scaffold an Express 5 + TypeScript backend: database, auth, optional Next.js front end.",
   "repository": {
     "url": "https://github.com/dvd90/chassis",
     "source": "github",
