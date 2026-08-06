@@ -1,7 +1,7 @@
 import type { Response } from 'express';
 import { AppError, ERROR_CODES } from '../core';
 import { config } from '../config';
-import { now } from '../utils/clock';
+import { now, nowSeconds } from '../utils/clock';
 import { addTo, seconds } from '../utils/duration';
 import { randomToken, sha256 } from '../utils/tokens';
 import { sessionStore } from '../db/sessions';
@@ -51,7 +51,7 @@ export function signingKey(): Uint8Array {
 // Back to a top-level import the day this package goes "type": "module".
 async function mintAccessToken(user: AuthUser, familyId: string) {
   const { SignJWT } = await import('jose');
-  const issuedAt = Math.floor(now().getTime() / 1000);
+  const issuedAt = nowSeconds();
 
   return new SignJWT({ email: user.email, sid: familyId })
     .setProtectedHeader({ alg: 'HS256' })

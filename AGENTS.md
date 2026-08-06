@@ -63,8 +63,8 @@ uses. Green means done; anything else means keep going.
 - ❌ Don't disable lint rules or loosen `tsconfig` to make `verify` pass —
   fix the actual issue.
 - ❌ Don't turn the dynamic `import('jose')` in `src/integrations/jwt.ts` or
-  `src/controllers/Auth.controller.ts` into a top-level import. jose is
-  ESM-only and this is a CommonJS build; a static import fails `typecheck`.
+  `src/services/session.ts` into a top-level import. jose is ESM-only and this
+  is a CommonJS build; a static import fails `typecheck`.
 
 ## Where things live
 
