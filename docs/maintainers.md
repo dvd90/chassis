@@ -214,6 +214,35 @@ majors. For each: read the migration guide, upgrade in a branch, run
 `npm run verify` plus both CLI smoke tests (`--yes` and `--bare`), and
 check the boot log still shows a clean standalone start.
 
+#### TypeScript 7
+
+The template already compiles clean under the Go-native compiler —
+`npx typescript@7 --noEmit` exits 0 — but the bump is **blocked on
+typescript-eslint**, which supports `<6.1.0` and cannot run on 7.0 because
+7.0 ships no programmatic compiler API (that lands in 7.1). `npm run lint`
+breaks the moment `typescript@7` is installed, so `verify` fails on the lint
+leg, not the compile leg. Same block applies to ts-jest, ts-morph and the
+Vue/Svelte/Astro template checkers.
+
+When typescript-eslint ships 7.1 support, the upgrade is a two-line bump of
+`typescript` and `typescript-eslint`. Nothing else — the readiness work is
+already in the template:
+
+- `moduleResolution: "node16"` in `tsconfig.json`. TS 7 removed
+  `node`/`node10`. Output stays CommonJS (no `"type": "module"`), so `dist/`,
+  `npm start` and the Dockerfile are unchanged.
+- `jose` is imported dynamically in `src/integrations/jwt.ts` and
+  `src/controllers/Auth.controller.ts`. It publishes no `require` condition,
+  so a static import from a CommonJS file is a `TS1479` error under `node16`.
+  `node16` also emits a real `import()` rather than downleveling it to
+  `require`, which is what makes an ESM-only package work in the CJS build.
+- `experimentalDecorators` survives in TS 7, and there is no
+  `emitDecoratorMetadata` or `reflect-metadata` here, so `@route` needs
+  nothing. That is the part that breaks other decorator frameworks.
+
+To try the new compiler without touching `verify`:
+`npx -y typescript@7 --noEmit -p tsconfig.build.json`.
+
 ## Support surface
 
 Keep these in sync when the code changes — they're the public promise:

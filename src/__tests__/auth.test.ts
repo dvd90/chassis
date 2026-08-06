@@ -19,9 +19,9 @@ let app: Express;
 beforeAll(async () => {
   process.env.JWT_SECRET = 'test-secret-that-is-long-enough-to-sign-with';
 
-  const { createApp } = await import('../app');
-  const { initJwt } = await import('../integrations/jwt');
-  const { Routable, protectedRoute } = await import('../core');
+  const { createApp } = await import('../app.js');
+  const { initJwt } = await import('../integrations/jwt.js');
+  const { Routable, protectedRoute } = await import('../core/index.js');
 
   class SecretController extends Routable {
     constructor() {
@@ -113,8 +113,8 @@ describe('user store selection', () => {
   it('falls back to the in-memory store when no database is configured', async () => {
     // The seam in src/db/users.ts resolves per call, by feature flag — with
     // no DB env vars set, that must be the in-memory store.
-    const { userStore } = await import('../db/users');
-    const { memoryUsers } = await import('../db/memory-users');
+    const { userStore } = await import('../db/users.js');
+    const { memoryUsers } = await import('../db/memory-users.js');
     expect(userStore()).toBe(memoryUsers);
   });
 });
@@ -126,7 +126,7 @@ describe('when JWT_SECRET is unset', () => {
     delete process.env.JWT_SECRET;
 
     try {
-      const { createApp } = await import('../app');
+      const { createApp } = await import('../app.js');
       const res = await request(createApp())
         .post('/auth/login')
         .send({ email: 'dev@example.com', password: 'correct-horse-42' });
