@@ -68,7 +68,7 @@ rest of the codebase rather than fighting it.
 
 ## Features
 
-- **TypeScript 5 + Express 5** — strict types, async errors caught automatically
+- **TypeScript 6 + Express 5** — strict types, async errors caught automatically
 - **Decorator routing** — `@route` / `@protectedRoute` on controller methods, controllers auto-mount
 - **Consistent responses** — `req.resHandler.ok() / .notFound() / .validation()` with structured logging
 - **Request correlation** — every request gets a `callId` (or propagates `x-call-id`), echoed in responses and logs

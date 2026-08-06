@@ -214,19 +214,25 @@ majors. For each: read the migration guide, upgrade in a branch, run
 `npm run verify` plus both CLI smoke tests (`--yes` and `--bare`), and
 check the boot log still shows a clean standalone start.
 
-#### TypeScript 7
+#### TypeScript: on 6.0, ready for 7
 
-The template already compiles clean under the Go-native compiler —
-`npx typescript@7 --noEmit` exits 0 — but the bump is **blocked on
-typescript-eslint**, which supports `<6.1.0` and cannot run on 7.0 because
-7.0 ships no programmatic compiler API (that lands in 7.1). `npm run lint`
-breaks the moment `typescript@7` is installed, so `verify` fails on the lint
-leg, not the compile leg. Same block applies to ts-jest, ts-morph and the
-Vue/Svelte/Astro template checkers.
+The template is on **TypeScript 6.0**, the bridge release: it turns every TS 7
+removal into an error while still being the JavaScript compiler the ecosystem
+can introspect. Passing it clean is the real proof the template is 7-ready —
+and `npx -y -p typescript@7 tsc --noEmit` does exit 0 here, root and `web/`.
 
-When typescript-eslint ships 7.1 support, the upgrade is a two-line bump of
-`typescript` and `typescript-eslint`. Nothing else — the readiness work is
-already in the template:
+**The version is pinned with `~`, not `^`, on purpose.** typescript-eslint
+supports `<6.1.0`, and the CLI scaffolds projects **without a lockfile** — so a
+caret would resolve to 6.1 the day it ships and break `npm run verify` for
+every new project. Loosen it only once typescript-eslint's peer range moves.
+Both `package.json` and `web/package.json` are pinned this way.
+
+Going to 7 is blocked on the same package: 7.0 ships **no programmatic compiler
+API** (that lands in 7.1), so typescript-eslint cannot run on it at all — nor
+can ts-jest, ts-morph, or the Vue/Svelte/Astro template checkers. `npm run lint`
+breaks the moment `typescript@7` is installed; `verify` fails on the lint leg,
+never the compile leg. When that clears, the upgrade is a version bump and
+nothing else. The work is already in the template:
 
 - `moduleResolution: "node16"` in `tsconfig.json`. TS 7 removed
   `node`/`node10`. Output stays CommonJS (no `"type": "module"`), so `dist/`,
@@ -236,12 +242,15 @@ already in the template:
   so a static import from a CommonJS file is a `TS1479` error under `node16`.
   `node16` also emits a real `import()` rather than downleveling it to
   `require`, which is what makes an ESM-only package work in the CJS build.
+- `declare module '*.css'` in `web/types/next.d.ts`. Next types
+  `*.module.css` but not plain global stylesheets, and TS 6 stopped letting an
+  unresolvable side-effect import pass (`TS2882`).
 - `experimentalDecorators` survives in TS 7, and there is no
   `emitDecoratorMetadata` or `reflect-metadata` here, so `@route` needs
   nothing. That is the part that breaks other decorator frameworks.
 
 To try the new compiler without touching `verify`:
-`npx -y typescript@7 --noEmit -p tsconfig.build.json`.
+`npx -y -p typescript@7 tsc --noEmit -p tsconfig.build.json`.
 
 ## Support surface
 
