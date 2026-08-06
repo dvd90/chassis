@@ -30,7 +30,7 @@ generated list of presets, choices, and toggles.
 | Group           | Values                                   |
 | --------------- | ---------------------------------------- |
 | `--db <name>`   | `none` · `mongo` · `postgres` · `sqlite` |
-| `--auth <name>` | `none` · `auth0` · `jwt` · `clerk`       |
+| `--auth <name>` | `none` · `auth0` · `clerk` · `jwt` · `magic-only` · `password+magic` |
 
 Choosing a database brings its ORM: `mongo` → Mongoose, `postgres`/`sqlite`
 → Drizzle.

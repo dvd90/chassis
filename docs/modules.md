@@ -42,18 +42,44 @@ because their options are mutually exclusive:
 
 - **Database** — `none` / `mongo` / `postgres` / `sqlite`. The ORM follows the
   choice (Mongoose or Drizzle). See [Database](guides/database.md).
-- **Auth** — `none` / `auth0` / `jwt` / `clerk`, all sharing the
+- **Auth** — `none` / `auth0` / `clerk` for hosted providers, or one of three
+  local variants (see `--help` for their names). All share the
   `setAuthProvider()` seam. See [Authentication](guides/authentication.md).
-  Each variant also has a **web half** (`web/auth/providers/<name>`) behind
-  the equivalent front-end seam — one re-export line in `web/auth/active.ts`.
-  Local JWT additionally ships the piece the hosted providers don't need: a
-  register/login controller and a user store that follows the database
-  choice. See [Web front end](guides/web.md).
+  Each has a **web half** (`web/auth/providers/<name>`) behind the equivalent
+  front-end seam — one re-export line in `web/auth/active.ts`. The local
+  variants additionally ship what the hosted providers don't need: sign-in
+  controllers, an identity store that follows the database choice, and a
+  session layer. See [Web front end](guides/web.md).
 
 Mechanically a group variant is just a module in the `chassis:<name>`
 namespace: choosing Postgres declines `mongo` and `sqlite`, which prune
 exactly like a declined toggle. The template ships every variant installed
 together; the CLI keeps only the one you pick.
+
+## Implied modules
+
+The three local auth variants are the exception: they own no files at all, and
+exist only to name a combination of **implied** modules — `session`, `password`
+and `magic`, declared in `IMPLIED` in `cli/modules.mjs`.
+
+```js
+// cli/modules.mjs — each local variant names the modules it composes
+implies: ['session', 'password'];
+implies: ['session', 'magic'];
+implies: ['session', 'password', 'magic'];
+```
+
+The indirection buys something specific. A file may be claimed by exactly one
+module — the catalog test enforces it — so the variant that keeps both sign-in
+methods, needing the union of two file sets, could not be expressed as a flat
+`files` list. And the
+session layer is shared by all three, so it cannot belong to any of them.
+
+Implied modules deliberately live outside `MODULES`, which means the
+interactive "Custom" path never offers them and presets never list them: they
+are consequences of an auth choice, not choices of their own. They still prune
+exactly like anything else — `chassis:session`, `chassis:password` and
+`chassis:magic` markers behave identically to a toggle's.
 
 `@protectedRoute` (auth) and `@paidRoute` (x402) live in `src/core` and are
 always present — with no provider configured they answer `501`, never open.

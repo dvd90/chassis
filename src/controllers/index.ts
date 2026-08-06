@@ -5,4 +5,6 @@
  */
 export * from './Status.controller';
 export * from './Health.controller';
-export * from './Auth.controller'; // chassis:jwt
+export * from './Session.controller'; // chassis:session
+export * from './Password.controller'; // chassis:password
+export * from './Magic.controller'; // chassis:magic

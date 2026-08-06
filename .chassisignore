@@ -20,3 +20,7 @@ mcp-server
 .github/workflows/docs.yml
 .github/workflows/published.yml
 .github/workflows/docker.yml
+
+# Design notes record how Chassis itself was built and discuss modules a
+# generated project may have declined — including, by name, ones it pruned.
+docs/design

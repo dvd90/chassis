@@ -26,6 +26,9 @@ export function createApp(options: CreateAppOptions = {}): Express {
   app.use(callIdMiddleware);
   app.use(ResponseHandler.middleware);
   app.use(express.json());
+  // The sign-in confirmation page is a plain HTML form, and a form posts  // chassis:magic
+  // urlencoded — so it works with no client-side JavaScript at all.  // chassis:magic
+  app.use(express.urlencoded({ extended: false })); // chassis:magic
 
   if (config.env === 'development') {
     app.use(requestLogger);

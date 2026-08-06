@@ -10,4 +10,6 @@ export const examples = pgTable('examples', {
   createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
-export * from './users.schema'; // chassis:jwt
+export * from './users.schema'; // chassis:session
+export * from './sessions.schema'; // chassis:session
+export * from './magic.schema'; // chassis:magic

@@ -52,6 +52,37 @@ jobs:
       - name: chassis-mcp # chassis:template
         run: npm ci --prefix mcp-server && npm test --prefix mcp-server # chassis:template
 
+  mail-e2e: # chassis:magic
+    # The magic-link flow against a real SMTP server, because the capture # chassis:magic
+    # transport in the unit tests cannot prove an email actually sends. # chassis:magic
+    # Skipped by `npm run verify`, which must stay runnable with no Docker. # chassis:magic
+    runs-on: ubuntu-latest # chassis:magic
+    timeout-minutes: 10 # chassis:magic
+    # chassis:magic
+    services: # chassis:magic
+      mailpit: # chassis:magic
+        image: axllent/mailpit:latest # chassis:magic
+        ports: # chassis:magic
+          - 1025:1025 # chassis:magic
+          - 8025:8025 # chassis:magic
+    # chassis:magic
+    steps: # chassis:magic
+      - uses: actions/checkout@v4 # chassis:magic
+      # chassis:magic
+      - uses: actions/setup-node@v4 # chassis:magic
+        with: # chassis:magic
+          node-version: 20 # chassis:magic
+          cache: npm # chassis:magic
+      # chassis:magic
+      - name: Install dependencies # chassis:magic
+        run: npm ci # chassis:magic
+      # chassis:magic
+      - name: Magic-link end to end # chassis:magic
+        run: MAILPIT=1 npx vitest run src/__tests__/magic.e2e.test.ts # chassis:magic
+        env: # chassis:magic
+          SMTP_URL: smtp://localhost:1025 # chassis:magic
+          MAILPIT_API: http://localhost:8025 # chassis:magic
+
   scaffold:
     # Scaffolds every project type and asserts each installs, verifies,
     # builds, and ships only the files/deps its chosen modules need (no dead

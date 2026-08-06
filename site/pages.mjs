@@ -19,6 +19,10 @@ export const SECTIONS = [
       { file: 'docs/guides/building-an-api.md', title: 'Building an API' },
       { file: 'docs/guides/database.md', title: 'Database' },
       { file: 'docs/guides/authentication.md', title: 'Authentication' },
+      { file: 'docs/guides/password-auth.md', title: 'Password sign-in' },
+      { file: 'docs/guides/magic-link.md', title: 'Magic link' },
+      { file: 'docs/guides/sessions.md', title: 'Sessions' },
+      { file: 'docs/guides/transports.md', title: 'Mail & SMS transports' },
       { file: 'docs/guides/web.md', title: 'Web front end' },
       { file: 'docs/guides/mcp.md', title: 'MCP server' },
       { file: 'docs/guides/payments-x402.md', title: 'Payments (x402)' },
@@ -44,7 +48,12 @@ export const SECTIONS = [
     title: 'Project',
     pages: [
       { file: 'AGENTS.md', title: 'Agent guide' },
-      { file: 'docs/maintainers.md', title: 'Maintainers' }
+      { file: 'docs/maintainers.md', title: 'Maintainers' },
+      {
+        file: 'docs/design/magic-link.md',
+        title: 'Design: magic link',
+        blurb: 'Magic-link auth and refresh sessions, as designed'
+      }
     ]
   }
 ];

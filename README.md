@@ -4,7 +4,7 @@
 
 **[📖 Documentation](https://dvd90.github.io/chassis/)** · [Getting started](https://dvd90.github.io/chassis/#getting-started) · [create-chassis on npm](https://www.npmjs.com/package/create-chassis)
 
-Chassis gives you NestJS-style controller ergonomics on plain Express 5 — in a handful of small files you can actually read. Zero configuration required: the server boots standalone, and every integration switches on only when you add its environment variable. Scaffold with a preset or pick à la carte — a database (Mongo, Postgres, or SQLite, ORM included), an auth provider (Auth0, JWT, or Clerk), an optional Next.js front end, Sentry, an MCP server, and x402 payments — and the CLI ships only what you chose.
+Chassis gives you NestJS-style controller ergonomics on plain Express 5 — in a handful of small files you can actually read. Zero configuration required: the server boots standalone, and every integration switches on only when you add its environment variable. Scaffold with a preset or pick à la carte — a database (Mongo, Postgres, or SQLite, ORM included), an auth provider (Auth0, Clerk, or built-in local sign-in), an optional Next.js front end, Sentry, an MCP server, and x402 payments — and the CLI ships only what you chose.
 
 ```ts
 export class UserController extends Routable {
@@ -74,7 +74,7 @@ rest of the codebase rather than fighting it.
 - **Request correlation** — every request gets a `callId` (or propagates `x-call-id`), echoed in responses and logs
 - **Typed, validated config** — zod-checked environment via `src/config`; the app refuses to boot on bad config
 - **Zod input validation** — `validate({ body, query, params })` middleware with structured 400s
-- **Pick-your-stack scaffolder** — presets or à la carte: database + ORM (Mongo/Postgres/SQLite), auth (Auth0/JWT/Clerk), a Next.js front end, Sentry, MCP, x402 — the CLI prunes everything else so `package.json` carries only what you chose
+- **Pick-your-stack scaffolder** — presets or à la carte: database + ORM (Mongo/Postgres/SQLite), auth (Auth0/Clerk/local), a Next.js front end, Sentry, MCP, x402 — the CLI prunes everything else so `package.json` carries only what you chose
 - **Opt-in integrations** — every module enables by env var, never required
 - **Payment-gated routes** — `@paidRoute('get', '/report', '$0.01')` via the x402 protocol (opt-in)
 - **Optional Next.js front end** — `--web` adds an App Router app and makes the project an npm-workspaces monorepo (`apps/api` + `apps/web`); the auth provider you picked is wired on both sides
@@ -121,6 +121,49 @@ Copy `.env.example` to `.env`. Each integration turns on when its variables are 
 | Sentry      | `SENTRY_DSN`                      | Automatic error reporting from the central error handler  |
 
 Using a different IdP? Call `setAuthProvider([...yourMiddleware])` at boot and `@protectedRoute` uses it — see `src/core/auth.ts`.
+
+### Sign in without a third party
+
+Local sign-in ships in three variants — emailed link, the classic credential
+form, or both. Run `npm create chassis --help` to see the `--auth` values, or
+read [Authentication](docs/guides/authentication.md). Whichever you pick, they
+share one session layer.
+
+```
+POST /auth/magic/request  {email, returnTo?}   → 202, identical for every address
+GET  /auth/magic/:token                        → confirm page — consumes nothing
+POST /auth/magic/redeem   {token}              → session + redirect
+POST /auth/magic/code     {email, code}        → same, from the other device
+POST /auth/refresh | /auth/logout | /auth/revoke-all
+```
+
+Four things worth knowing about the emailed-link flow:
+
+- **`GET` never spends a token.** Mail security scanners prefetch links, and a
+  single-use token burned by a scanner is how this feature usually breaks in
+  production. Redemption is a `POST`, on a click.
+- **Every email carries a six-digit code too**, so someone who asks on a laptop
+  and reads their mail on a phone can still finish on the laptop.
+- **The request endpoint will not tell you who has an account** — same body,
+  same timing, every address.
+- **Refresh tokens rotate on every use**, and replaying a spent one revokes the
+  whole session family. Sliding `SESSION_IDLE`, hard `SESSION_ABSOLUTE` cap.
+
+| Variable                                  | Default                 |
+| ----------------------------------------- | ----------------------- |
+| `JWT_SECRET`                              | _(required)_            |
+| `SESSION_IDLE` / `SESSION_ABSOLUTE`       | `30d` / `90d`           |
+| `MAGIC_TOKEN_TTL` / `MAGIC_CODE_ATTEMPTS` | `15m` / `5`             |
+| `MAGIC_LINK_BASE_URL`                     | `http://localhost:8000` |
+| `SMTP_URL`                                | unset → logs the email  |
+
+Chassis binds no email or SMS provider — bind yours through `setMailTransport()`
+or `setSmsTransport()`. Proving an address fires one hook, `setOnVerified()`,
+and that is the whole extension surface: consent and onboarding are yours.
+
+Guides: [magic link](docs/guides/magic-link.md) ·
+[sessions](docs/guides/sessions.md) ·
+[transports](docs/guides/transports.md)
 
 ## Project structure
 

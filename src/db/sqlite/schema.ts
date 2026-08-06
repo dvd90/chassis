@@ -10,4 +10,6 @@ export const examples = sqliteTable('examples', {
   createdAt: text('created_at').notNull()
 });
 
-export * from './users.schema'; // chassis:jwt
+export * from './users.schema'; // chassis:session
+export * from './sessions.schema'; // chassis:session
+export * from './magic.schema'; // chassis:magic

@@ -32,7 +32,15 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { MODULES, GROUPS, PRESETS, MONOREPO, descriptor } from './modules.mjs';
+import {
+  MODULES,
+  GROUPS,
+  IMPLIED,
+  PRESETS,
+  MONOREPO,
+  descriptor,
+  impliedBy
+} from './modules.mjs';
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -48,15 +56,24 @@ const templatePkg = JSON.parse(
   fs.readFileSync(path.join(repoRoot, 'package.json'), 'utf8')
 );
 
-/** Every module + group-variant name (excluding the empty `none`). */
+/**
+ * Every module, group-variant and implied-module name (excluding the empty
+ * `none`). Implied modules are never chosen directly, but they own files and
+ * dependencies, so every oracle below has to know about them.
+ */
 function allNames() {
-  const names = Object.keys(MODULES);
+  const names = [...Object.keys(MODULES), ...Object.keys(IMPLIED)];
   for (const group of Object.values(GROUPS)) {
     for (const key of Object.keys(group.variants)) {
       if (key !== 'none') names.push(key);
     }
   }
   return names;
+}
+
+/** A selection plus everything it drags in. */
+function expand(names) {
+  return [...new Set(names.flatMap((name) => [name, ...impliedBy(name)]))];
 }
 
 const allModuleDeps = new Set();
@@ -101,6 +118,12 @@ function resolvePath(dir, file, monorepo) {
   if (!monorepo) return path.join(dir, file);
   if (file === 'web' || file.startsWith('web/')) {
     return path.join(dir, path.dirname(MONOREPO.webDir), file);
+  }
+  // Only the API's own paths move under apps/api. Everything else — docs,
+  // README, .github — stays at the repo root, so a module that owns a doc
+  // file must be looked for there.
+  if (!MONOREPO.apiPaths.includes(file.split('/')[0])) {
+    return path.join(dir, file);
   }
   return path.join(dir, MONOREPO.apiDir, file);
 }
@@ -170,8 +193,89 @@ function walkText(dir, out = [], skip = NOT_WALKED) {
   return out;
 }
 
+
+/**
+ * What a declined module must leave no trace of.
+ *
+ * The acceptance criterion for `--auth magic-only` is that the word "password"
+ * appears nowhere in a generated project. Rather than special-casing that one
+ * grep, every splittable module declares what its absence should look like —
+ * so magic and session are held to the same standard.
+ *
+ * `everywhere` widens the scan to markdown. Only `password` sets it: docs
+ * deliberately describe modules a project declined (that is why .md is exempt
+ * from marker pruning), so the module-specific prose lives in module-owned doc
+ * files that get deleted outright.
+ */
+const RESIDUE = {
+  password: {
+    pattern: /password/i,
+    // The database's own credential, correctly kept, and nothing to do with
+    // how people sign in.
+    allow: /POSTGRES_PASSWORD/,
+    everywhere: true
+  },
+
+  magic: { pattern: /\bmagic\b|mailpit|nodemailer/i },
+  session: { pattern: /refreshToken|refresh_token|SESSION_ABSOLUTE/i }
+};
+
+/**
+ * Two docs are exempt from the residue scan, for the same reason .md is exempt
+ * from marker pruning: their subject *is* the module system, so naming a module
+ * the reader did not scaffold is the job rather than a leak. Everything else,
+ * prose included, is held to the rule.
+ */
+const SCAFFOLDER_DOCS = ['docs/modules.md', 'docs/reference/cli.md'];
+
+function describesTheScaffolder(dir, file) {
+  const rel = path.relative(dir, file).split(path.sep).join('/');
+  return SCAFFOLDER_DOCS.includes(rel);
+}
+
+function assertNoModuleResidue(dir, declined) {
+  for (const name of declined) {
+    const rule = RESIDUE[name];
+    if (!rule) continue;
+
+    const files = rule.everywhere ? walkAll(dir) : walkText(dir, []);
+
+    for (const file of files) {
+      if (describesTheScaffolder(dir, file)) continue;
+      const lines = fs.readFileSync(file, 'utf8').split('\n');
+      for (const [index, line] of lines.entries()) {
+        if (!rule.pattern.test(line)) continue;
+        if (rule.allow?.test(line)) continue;
+        assert.fail(
+          `declined module ${name} left a trace in ` +
+            `${path.relative(dir, file)}:${index + 1}: ${line.trim()}`
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Every text file, markdown included. Lockfiles are skipped: they are full of
+ * transitive package names nobody chose (`magic-string`, for one), and none of
+ * it is residue from a pruned module.
+ */
+function walkAll(dir, out = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.name === 'node_modules' || entry.name === '.git') continue;
+    if (entry.name === 'package-lock.json') continue;
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkAll(full, out);
+    else if (/\.(ts|tsx|mjs|yml|yaml|json|md|example)$/.test(entry.name)) {
+      out.push(full);
+    } else if (entry.name.startsWith('.env')) out.push(full);
+  }
+  return out;
+}
+
 /** The heart of the test: assert the scaffold carries exactly `keptNames`. */
-function assertScaffold(dir, keptNames) {
+function assertScaffold(dir, selected) {
+  const keptNames = expand(selected);
   const monorepo = keptNames.includes('web');
   const at = (file) => resolvePath(dir, file, monorepo);
   const pkg = readPkg(monorepo ? path.join(dir, MONOREPO.apiDir) : dir);
@@ -225,6 +329,8 @@ function assertScaffold(dir, keptNames) {
       );
     }
   }
+
+  assertNoModuleResidue(dir, declined);
 
   // 4. Not one marker survives in the code — declined modules take their
   //    whole line, kept ones have the marker text stripped. (Docs keep
@@ -530,9 +636,67 @@ test('catalog: every module is marked or has files of its own', () => {
     }
   }
   for (const name of allNames()) {
+    // A variant that only composes implied modules owns no files and no
+    // markers of its own — that is the whole point of `implies`.
+    if (impliedBy(name).length) continue;
     assert.ok(
       marked.has(name) || declaredPaths(descriptor(name)).length > 0,
       `${name} has no markers and no files — pruning it would be a no-op`
+    );
+  }
+});
+
+test('catalog: no .tsx file carries a chassis: marker', () => {
+  // The pruner does not read .tsx (cli/index.mjs), and neither does the
+  // marker-residue grep in .github/workflows/published.yml. A marker there
+  // would therefore survive into every generated project, silently. Rather
+  // than teach two regexes about JSX — where Prettier moves comments around
+  // and `{/* ... */}` does not match the end-of-line pattern anyway — markers
+  // stay in .ts and this test keeps them there.
+  const offenders = [];
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (NOT_WALKED.includes(entry.name)) continue;
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name.endsWith('.tsx')) {
+        const source = fs.readFileSync(full, 'utf8');
+        if (/chassis:\w+/.test(source)) {
+          offenders.push(path.relative(repoRoot, full));
+        }
+      }
+    }
+  })(repoRoot);
+
+  assert.deepEqual(
+    offenders,
+    [],
+    'markers in .tsx are invisible to the pruner — move them to a .ts file'
+  );
+});
+
+test('catalog: every implies target is a real module', () => {
+  for (const name of allNames()) {
+    for (const target of impliedBy(name)) {
+      assert.ok(
+        descriptor(target),
+        `${name} implies "${target}", which no module declares`
+      );
+      assert.ok(
+        IMPLIED[target],
+        `${name} implies "${target}", which must live in IMPLIED so the ` +
+          `interactive path never prompts for it`
+      );
+    }
+  }
+});
+
+test('catalog: every implied module is reachable from some variant', () => {
+  const reachable = new Set(allNames().flatMap((name) => impliedBy(name)));
+  for (const name of Object.keys(IMPLIED)) {
+    assert.ok(
+      reachable.has(name),
+      `IMPLIED.${name} is implied by nothing — it could never be scaffolded`
     );
   }
 });
@@ -542,7 +706,11 @@ test('catalog: every auth provider file is claimed by exactly one provider', () 
   // and then imports a module the CLI deleted. This is the guard against
   // adding a provider file (or a test for one) and forgetting the catalog.
   const owner = new Map();
-  for (const [name, variant] of Object.entries(GROUPS.auth.variants)) {
+  const claimants = [
+    ...Object.entries(GROUPS.auth.variants),
+    ...Object.entries(IMPLIED)
+  ];
+  for (const [name, variant] of claimants) {
     for (const file of variant.web?.files ?? []) {
       const previous = owner.get(file);
       assert.ok(!previous, `${file} claimed by both ${previous} and ${name}`);
@@ -984,6 +1152,32 @@ test('structural: preset stacks match PRESETS', () => {
   assert.deepEqual(PRESETS.minimal.db, 'none');
 });
 
+test('structural: the shipped CI workflow follows the magic module', () => {
+  // A whole workflow job is marked line-by-line, which is the largest marked
+  // block in the template — exactly the kind of thing that half-prunes and
+  // leaves invalid YAML behind.
+  const withMagic = scaffold(['--preset', 'minimal', '--auth', 'magic-only']);
+  const withoutMagic = scaffold(['--preset', 'minimal', '--auth', 'jwt']);
+
+  try {
+    const ci = (dir) =>
+      fs.readFileSync(path.join(dir, '.github/workflows/ci.yml'), 'utf8');
+
+    assert.match(ci(withMagic), /mail-e2e:/);
+    assert.match(ci(withMagic), /axllent\/mailpit/);
+    assert.doesNotMatch(ci(withoutMagic), /mail-e2e:/);
+    assert.doesNotMatch(ci(withoutMagic), /mailpit/);
+
+    // ...and what survives is still a single well-formed job list.
+    assert.match(ci(withoutMagic), /^jobs:$/m);
+    assert.match(ci(withoutMagic), /^ {2}scaffold:$/m);
+  } finally {
+    for (const dir of [withMagic, withoutMagic]) {
+      fs.rmSync(path.dirname(dir), { recursive: true, force: true });
+    }
+  }
+});
+
 // ── Build cases (SCAFFOLD_BUILD=1): install + verify ────────
 
 const build = [
@@ -1000,7 +1194,13 @@ const build = [
   { label: 'fullstack (sqlite/jwt/web)', flags: ['--preset', 'minimal', '--db', 'sqlite', '--auth', 'jwt', '--web'], kept: ['sqlite', 'jwt', 'web'], db: 'sqlite' }, // prettier-ignore
   { label: 'web + clerk', flags: ['--preset', 'minimal', '--auth', 'clerk', '--web'], kept: ['clerk', 'web'], db: null }, // prettier-ignore
   { label: 'web + auth0', flags: ['--preset', 'minimal', '--auth', 'auth0', '--web'], kept: ['auth0', 'web'], db: null }, // prettier-ignore
-  { label: 'web + no auth', flags: ['--preset', 'minimal', '--web'], kept: ['web'], db: null } // prettier-ignore
+  { label: 'web + no auth', flags: ['--preset', 'minimal', '--web'], kept: ['web'], db: null }, // prettier-ignore
+  // The two new local variants. magic-only is the one that has to compile with
+  // every password reference pruned; password+magic is the one where both
+  // halves share a session layer.
+  { label: 'magic-only (postgres)', flags: ['--preset', 'minimal', '--db', 'postgres', '--auth', 'magic-only'], kept: ['postgres', 'magic-only'], db: 'postgres' }, // prettier-ignore
+  { label: 'password+magic (sqlite)', flags: ['--preset', 'minimal', '--db', 'sqlite', '--auth', 'password+magic'], kept: ['sqlite', 'password+magic'], db: 'sqlite' }, // prettier-ignore
+  { label: 'magic-only, no database + web', flags: ['--preset', 'minimal', '--auth', 'magic-only', '--web'], kept: ['magic-only', 'web'], db: null } // prettier-ignore
 ];
 
 for (const [buildIndex, { label, flags, kept, db }] of build.entries()) {

@@ -114,7 +114,7 @@ server.registerTool(
       ),
       notes: [
         'Every option is independent: a preset can be overridden field by field.',
-        'auth=jwt ships POST /auth/register and /auth/login plus a user store; auth0 and clerk are hosted.',
+        'Local auth (jwt, magic-only, password+magic) ships its own sign-in endpoints, an identity store and a rotating-refresh session layer; auth0 and clerk are hosted.',
         'web=true adds a Next.js front end and makes the project an npm-workspaces monorepo (apps/api + apps/web).',
         'The generated project passes `npm run verify` and `npm run build` as created.'
       ]

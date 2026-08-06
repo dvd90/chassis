@@ -73,12 +73,12 @@ These are mutually exclusive groups. Choosing a database brings its ORM along.
 | Group           | Values                                   | ORM                |
 | --------------- | ---------------------------------------- | ------------------ |
 | `--db <name>`   | `none` · `mongo` · `postgres` · `sqlite` | Mongoose / Drizzle |
-| `--auth <name>` | `none` · `auth0` · `jwt` · `clerk`       | —                  |
+| `--auth <name>` | `none` · `auth0` · `clerk` · `jwt` · `magic-only` · `password+magic` | — |
 
 - **`mongo`** — MongoDB via Mongoose.
 - **`postgres`** — Postgres via Drizzle (the flagship SQL stack).
 - **`sqlite`** — SQLite via Drizzle; zero-infra, in-memory by default.
-- **`auth0` / `jwt` / `clerk`** — all register through one pluggable
+- **`auth0` / `clerk` / the local variants** — all register through one pluggable
   `setAuthProvider()` seam behind the `@protectedRoute` decorator.
 
 ---
@@ -117,14 +117,16 @@ provider:
 
 | `--auth` | Front end                                                                   |
 | -------- | --------------------------------------------------------------------------- |
-| `jwt`    | sign-in form → `/api/session` → API `/auth/login` → **httpOnly cookie**     |
+| local    | sign-in form → `/api/session/*` → the API → **httpOnly cookies**            |
 | `auth0`  | `@auth0/nextjs-auth0`, with the API audience set so you get an access token |
 | `clerk`  | `@clerk/nextjs` — `<SignIn/>` and `auth().getToken()`                       |
 | `none`   | no sign-in; requests go out unauthenticated                                 |
 
-With `--auth jwt` the API also gains `POST /auth/register` and `/auth/login`,
-with users stored in whichever database you chose (or in memory when you chose
-none). Passwords use scrypt from `node:crypto` — no native build.
+With a local auth variant the API also gains its own sign-in endpoints and a
+session layer (short-lived access token, rotating refresh token with reuse
+detection), with identities stored in whichever database you chose — or in
+memory when you chose none. Emailed-link sign-in delivers through a transport
+seam; Chassis binds no email provider.
 
 ---
 

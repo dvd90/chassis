@@ -62,62 +62,43 @@ handler. To read the token's claims in a handler, use the `auth`
 property that `express-oauth2-jwt-bearer` sets on the request
 (`req.auth?.payload.sub`, etc.).
 
-## Option B — Local JWT (built in)
+## Option B — Local auth (built in)
 
-Pick `--auth jwt` for self-issued Bearer tokens with no third party. Set a
-secret:
+Chassis owns the credentials itself. Which sign-in methods a project has was
+decided when it was scaffolded; the guide for each one it kept sits alongside
+this page — see the sidebar, or `docs/guides/`.
+
+Whichever you chose, they all need a signing secret:
 
 ```bash
 # .env
 JWT_SECRET=a-long-random-string
 ```
 
-Unlike the hosted providers, this one has no user directory behind it — so
-Chassis ships the missing half: `src/controllers/Auth.controller.ts` mints
-tokens that `src/integrations/jwt.ts` then verifies (HS256, via
-[jose](https://github.com/panva/jose)).
+...and they all share one session layer: a short-lived access token plus a
+rotating refresh token, with reuse detection and revoke-all. See
+[Sessions](sessions.md).
 
-```bash
-curl localhost:8000/auth/register -H 'content-type: application/json' \
-  -d '{"email":"dev@example.com","password":"correct-horse-42"}'
-# → 201 { "user": { "id": "1", "email": "dev@example.com" }, "token": "eyJ..." }
+Unlike the hosted providers there is no third-party user directory, so Chassis
+ships the missing half: `src/db/users.ts` resolves an identity store the same
+way integrations resolve themselves, by feature flag, at call time.
 
-curl localhost:8000/auth/login -H 'content-type: application/json' \
-  -d '{"email":"dev@example.com","password":"correct-horse-42"}'
-# → 200 { "user": {...}, "token": "eyJ..." }
-```
-
-Passwords are hashed with **scrypt** from Node's `node:crypto` — a
-memory-hard KDF in the standard library, so there is no argon2/bcrypt
-dependency and no native build (`src/utils/password.ts`).
-
-### Where users are stored
-
-`src/db/users.ts` resolves the store the same way integrations resolve
-themselves — by feature flag, at call time:
-
-| Configured database | Store                                                         |
-| ------------------- | ------------------------------------------------------------- |
-| SQLite / Postgres   | Drizzle `users` table (`src/db/<db>/users.ts`)                |
-| MongoDB             | Mongoose `User` model (`src/db/mongo/users.ts`)               |
-| _none_              | in-memory, seeded from `AUTH_DEV_EMAIL` / `AUTH_DEV_PASSWORD` |
+| Configured database | Store                                           |
+| ------------------- | ----------------------------------------------- |
+| SQLite / Postgres   | Drizzle `users` table (`src/db/<db>/users.ts`)  |
+| MongoDB             | Mongoose `User` model (`src/db/mongo/users.ts`) |
+| _none_              | in-memory, seeded from `AUTH_DEV_EMAIL`         |
 
 Pick a database and the store follows it — no code change. The in-memory
-fallback exists so `--auth jwt --db none` still boots and logs in during
-development; it is process-local and forgets everything on restart. Add a
-database before putting local JWT in front of real users.
+fallback exists so `--db none` still boots and signs in during development; it
+is process-local and forgets everything on restart. Add a database before
+putting local auth in front of real users.
 
-With Drizzle, generate the migration for the `users` table before first
-use:
+With Drizzle, generate the migration before first use:
 
 ```bash
 npx drizzle-kit generate --config src/db/sqlite/drizzle.config.ts
 ```
-
-Tokens are access tokens only, valid for one hour — there is no refresh
-rotation. Clients re-authenticate when a token expires; add a refresh
-endpoint alongside `/auth/login` if you need sessions to outlive that
-without a password prompt.
 
 ## Option C — Clerk (built in)
 

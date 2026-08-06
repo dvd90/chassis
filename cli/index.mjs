@@ -19,7 +19,15 @@ import path from 'node:path';
 import process from 'node:process';
 import { spawnSync } from 'node:child_process';
 import readline from 'node:readline/promises';
-import { MODULES, GROUPS, PRESETS, MONOREPO, descriptor } from './modules.mjs';
+import {
+  MODULES,
+  GROUPS,
+  IMPLIED,
+  PRESETS,
+  MONOREPO,
+  descriptor,
+  impliedBy
+} from './modules.mjs';
 import { resolveSelection } from './select.mjs';
 
 const REPO = 'dvd90/chassis';
@@ -309,10 +317,11 @@ await fetchTemplate(targetDir);
 
 // ── Prune everything not chosen ────────────────────────────
 
-// Kept = chosen db/auth variants + enabled toggles. Declined = the rest.
+// Kept = chosen db/auth variants + whatever they imply + enabled toggles.
+// Declined = the rest.
 const kept = [
   ...(sel.db !== 'none' ? [sel.db] : []),
-  ...(sel.auth !== 'none' ? [sel.auth] : []),
+  ...(sel.auth !== 'none' ? [sel.auth, ...impliedBy(sel.auth)] : []),
   ...Object.entries(sel.modules)
     .filter(([, on]) => on)
     .map(([key]) => key)
@@ -325,6 +334,11 @@ for (const group of Object.values(GROUPS)) {
   for (const key of Object.keys(group.variants)) {
     if (key !== 'none' && !kept.includes(key)) declined.push(key);
   }
+}
+// Implied modules are never chosen directly, so they are declined whenever
+// the selected auth variant did not ask for them.
+for (const key of Object.keys(IMPLIED)) {
+  if (!kept.includes(key)) declined.push(key);
 }
 for (const [key, on] of Object.entries(sel.modules)) {
   if (!on) declined.push(key);

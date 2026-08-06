@@ -4,7 +4,7 @@ import { initMongo, closeMongo } from './mongo'; // chassis:mongo
 import { initPostgres, closePostgres } from './postgres'; // chassis:postgres
 import { initSqlite, closeSqlite } from './sqlite'; // chassis:sqlite
 import { initAuth0 } from './auth0'; // chassis:auth0
-import { initJwt } from './jwt'; // chassis:jwt
+import { initJwt } from './jwt'; // chassis:session
 import { initClerk } from './clerk'; // chassis:clerk
 import { initSentry } from './sentry'; // chassis:sentry
 import { initX402 } from './x402'; // chassis:x402
@@ -17,7 +17,7 @@ import { initX402 } from './x402'; // chassis:x402
 export async function initIntegrations(): Promise<void> {
   if (config.features.sentry) initSentry(); // chassis:sentry
   if (config.features.auth0) initAuth0(); // chassis:auth0
-  if (config.features.jwt) initJwt(); // chassis:jwt
+  if (config.features.session) initJwt(); // chassis:session
   if (config.features.clerk) initClerk(); // chassis:clerk
   if (config.features.x402) initX402(); // chassis:x402
   if (config.features.mongo) await initMongo(); // chassis:mongo
