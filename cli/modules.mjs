@@ -20,7 +20,7 @@ export const MODULES = {
   },
   x402: {
     label: 'x402 payments (@paidRoute)',
-    files: ['src/integrations/x402.ts', 'src/types/x402-express.d.ts'],
+    files: ['src/integrations/x402.ts'],
     deps: ['x402-express']
   },
   web: {

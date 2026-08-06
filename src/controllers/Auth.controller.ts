@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import { SignJWT } from 'jose';
 import { z } from 'zod';
 import { AppError, ERROR_CODES, Routable, route, validate } from '../core';
 import { config } from '../config';
@@ -37,7 +36,10 @@ function signingKey(): Uint8Array {
   return new TextEncoder().encode(config.jwt.secret);
 }
 
-function issueToken(user: AuthUser): Promise<string> {
+// ponytail: jose ships ESM only, so a CJS build can't statically import it.
+// Back to a top-level import the day this package goes "type": "module".
+async function issueToken(user: AuthUser): Promise<string> {
+  const { SignJWT } = await import('jose');
   return new SignJWT({ email: user.email })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(user.id)
