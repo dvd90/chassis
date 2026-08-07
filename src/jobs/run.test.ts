@@ -71,7 +71,7 @@ function runSync(file: string, args: string[] = []) {
   };
 }
 
-describe('the jobs entrypoint', () => {
+describe('the jobs entrypoint', { timeout: 30_000 }, () => {
   it('exits cleanly when nothing is registered', () => {
     const { status, output } = runSync(fixture('empty', ''));
 
@@ -129,37 +129,97 @@ describe('the jobs entrypoint', () => {
   // behaviour that genuinely needs one — anything else just starves the rest
   // of the suite on a small runner.
 
-  it('aborts a long-running job on SIGTERM and shuts down', async () => {
-    const file = fixture(
-      'sigterm',
-      `jobs.push({
-         name: 'consumer',
-         run: ({ signal }) =>
-           new Promise((resolve) =>
-             signal.addEventListener('abort', () => {
-               console.log('CONSUMER-DRAINED');
-               resolve();
-             })
-           )
-       });`
-    );
+  /** A job that parks until shutdown and holds no handle of its own. */
+  const consumer = (onAbort = '') => `jobs.push({
+    name: 'consumer',
+    run: ({ signal }) =>
+      new Promise((resolve) =>
+        signal.addEventListener('abort', () => { ${onAbort} resolve(); })
+      )
+  });`;
 
+  interface Exit {
+    code: number | null;
+    /** Non-null when the process was killed rather than exiting by itself. */
+    signal: NodeJS.Signals | null;
+    output: string;
+  }
+
+  /**
+   * Spawn the entrypoint and SIGTERM it once `ready` shows up in its output —
+   * or immediately, if `ready` is null.
+   *
+   * Both `code` and `signal` are reported because the interesting failure is
+   * `code: null, signal: 'SIGTERM'`: the default disposition killed the
+   * process, meaning no handler was installed when the signal landed.
+   */
+  function runUntil(file: string, ready: RegExp | null): Promise<Exit> {
     const child = spawn(process.execPath, nodeArgs(file, []), spawnOpts);
     let output = '';
+    let signalled = false;
 
-    const status = await new Promise<number | null>((resolve, reject) => {
-      child.stdout.on('data', (chunk: Buffer) => {
+    const signalOnce = () => {
+      if (signalled) return;
+      signalled = true;
+      // Once only: every later chunk still matches, and re-signalling a
+      // process that is already draining races its exit.
+      child.kill('SIGTERM');
+    };
+
+    return new Promise<Exit>((resolve, reject) => {
+      const onData = (chunk: Buffer) => {
         output += chunk.toString();
-        // Wait until the harness says it is up, or SIGTERM races the boot.
-        if (output.includes('Jobs running')) child.kill('SIGTERM');
-      });
-      child.stderr.on('data', (chunk: Buffer) => (output += chunk.toString()));
+        if (ready?.test(output)) signalOnce();
+      };
+      child.stdout.on('data', onData);
+      child.stderr.on('data', onData);
       child.on('error', reject);
-      child.on('close', resolve);
+      child.on('close', (code, signal) => resolve({ code, signal, output }));
+      if (!ready) signalOnce();
     });
+  }
 
-    expect(status).toBe(0);
-    expect(output).toContain('SIGTERM received');
-    expect(output).toContain('CONSUMER-DRAINED');
-  }, 20_000);
+  it('stays up for a long-running job that holds no handle of its own', async () => {
+    const child = spawn(
+      process.execPath,
+      nodeArgs(fixture('keepalive', consumer()), []),
+      spawnOpts
+    );
+    let exited = false;
+    child.on('close', () => (exited = true));
+
+    // An unsettled promise holds nothing open, so without the harness's
+    // keep-alive this process is gone within a second of boot — reporting
+    // success, having run nothing. The two outcomes are an immediate exit
+    // versus staying up forever, so a short wait separates them decisively.
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+    expect(exited).toBe(false);
+
+    child.kill('SIGTERM');
+    await new Promise((resolve) => child.on('close', resolve));
+  });
+
+  it('handles SIGTERM that arrives during boot', async () => {
+    // The integrations line is written by `initIntegrations`, well before the
+    // harness is up, so this lands in the boot window — where SIGTERM used to
+    // hit a process with no handler yet and kill it outright.
+    const exit = await runUntil(
+      fixture('sigterm-boot', consumer()),
+      /ntegrations/i
+    );
+
+    expect(exit).toMatchObject({ code: 0, signal: null });
+    expect(exit.output).toContain('SIGTERM received');
+  });
+
+  it('aborts a long-running job on SIGTERM and shuts down', async () => {
+    const exit = await runUntil(
+      fixture('sigterm', consumer(`console.log('CONSUMER-DRAINED');`)),
+      /Jobs running/
+    );
+
+    expect(exit).toMatchObject({ code: 0, signal: null });
+    expect(exit.output).toContain('SIGTERM received');
+    expect(exit.output).toContain('CONSUMER-DRAINED');
+  });
 });

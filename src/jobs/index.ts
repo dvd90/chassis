@@ -80,6 +80,7 @@ export interface ScheduledJobs {
  */
 export function schedule(ctx: JobContext, list = jobs): ScheduledJobs {
   const crons: Cron[] = [];
+  const longRunning: Promise<void>[] = [];
 
   for (const job of list) {
     if (job.schedule) {
@@ -87,13 +88,33 @@ export function schedule(ctx: JobContext, list = jobs): ScheduledJobs {
         new Cron(job.schedule, { protect: true }, () => runJob(job, ctx))
       );
     } else {
-      void runJob(job, ctx);
+      longRunning.push(runJob(job, ctx));
     }
   }
+
+  // An unsettled promise does not hold the event loop open — only a handle
+  // does. Cron jobs bring their own timers, but a process whose only jobs are
+  // long-running ones would exit the moment they park on something they do not
+  // own (an abort signal, a callback from a library that keeps no handle), and
+  // it would exit reporting success.
+  //
+  // ponytail: one no-op interval as the keep-alive. The tidier answer is for
+  // every job to own a real handle, which is exactly what a harness cannot
+  // assume about code it did not write.
+  const keepAlive = longRunning.length
+    ? setInterval(() => {}, 60_000)
+    : undefined;
+
+  const release = () => {
+    if (keepAlive) clearInterval(keepAlive);
+  };
+
+  void Promise.allSettled(longRunning).then(release);
 
   return {
     stop: () => {
       for (const cron of crons) cron.stop();
+      release();
     }
   };
 }

@@ -1,4 +1,4 @@
-import { jobs, runJob, schedule, JobContext } from './index';
+import { jobs, runJob, schedule, JobContext, ScheduledJobs } from './index';
 import { initIntegrations, shutdownIntegrations } from '../integrations';
 import { logger } from '../utils/logger';
 
@@ -11,9 +11,41 @@ import { logger } from '../utils/logger';
  *   node dist/jobs/run.js     the production form of the first
  */
 async function main(): Promise<void> {
+  const controller = new AbortController();
+  // A no-op until the jobs are actually scheduled, so `shutdown` can be
+  // installed before there is anything to stop.
+  let running: ScheduledJobs = { stop: () => {} };
+  let stopping = false;
+
+  const shutdown = (signal: string): void => {
+    // A second SIGTERM during a drain must not start a second shutdown —
+    // that double-closes integrations and races two exits.
+    if (stopping) return;
+    stopping = true;
+
+    logger.info(`${signal} received — stopping jobs`);
+
+    running.stop();
+    controller.abort();
+
+    shutdownIntegrations()
+      .catch((err: Error) =>
+        logger.error(`Error during shutdown: ${err.message}`)
+      )
+      .finally(() => process.exit(0));
+
+    // Failsafe: force-exit if a long-running job ignores its abort signal.
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+
+  // Before any work starts, including connecting integrations. A SIGTERM that
+  // lands during boot would otherwise hard-kill a process that has already
+  // begun a job — and a rolling deploy sends exactly that.
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
   await initIntegrations();
 
-  const controller = new AbortController();
   const ctx: JobContext = { logger, signal: controller.signal };
   const requested = process.argv[2];
 
@@ -39,27 +71,8 @@ async function main(): Promise<void> {
     return;
   }
 
-  const running = schedule(ctx);
+  running = schedule(ctx);
   logger.info(`⏱️  Jobs running: ${jobs.map((job) => job.name).join(', ')}`);
-
-  const shutdown = (signal: string): void => {
-    logger.info(`${signal} received — stopping jobs`);
-
-    running.stop();
-    controller.abort();
-
-    shutdownIntegrations()
-      .catch((err: Error) =>
-        logger.error(`Error during shutdown: ${err.message}`)
-      )
-      .finally(() => process.exit(0));
-
-    // Failsafe: force-exit if a long-running job ignores its abort signal.
-    setTimeout(() => process.exit(1), 10_000).unref();
-  };
-
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
 main().catch((err: Error) => {
