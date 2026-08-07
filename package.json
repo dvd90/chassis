@@ -1,6 +1,7 @@
 {
   "name": "chassis",
   "version": "1.0.0",
+  "private": true,
   "description": "Chassis — a lightweight, decorator-driven Express + TypeScript backend starter. Clone, run, ship.",
   "main": "dist/server.js",
   "engines": {
