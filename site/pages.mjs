@@ -24,6 +24,7 @@ export const SECTIONS = [
       { file: 'docs/guides/sessions.md', title: 'Sessions' },
       { file: 'docs/guides/transports.md', title: 'Mail & SMS transports' },
       { file: 'docs/guides/web.md', title: 'Web front end' },
+      { file: 'docs/guides/jobs.md', title: 'Background jobs' },
       { file: 'docs/guides/mcp.md', title: 'MCP server' },
       { file: 'docs/guides/payments-x402.md', title: 'Payments (x402)' },
       { file: 'docs/guides/deployment.md', title: 'Deployment' }
