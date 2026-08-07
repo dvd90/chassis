@@ -9,7 +9,7 @@
 export const MODULES = {
   sentry: {
     label: 'Sentry error reporting',
-    files: ['src/integrations/sentry.ts'],
+    files: ['src/integrations/sentry.ts', 'src/integrations/sentry.test.ts'],
     deps: ['@sentry/node']
   },
   mcp: {
@@ -23,10 +23,16 @@ export const MODULES = {
     files: ['src/integrations/x402.ts'],
     deps: ['x402-express']
   },
+  jobs: {
+    label: 'Background jobs (cron + long-running)',
+    files: ['src/jobs', 'docs/guides/jobs.md'],
+    deps: ['croner'],
+    scripts: ['jobs', 'start:jobs']
+  },
   web: {
     label: 'Next.js front end (npm-workspaces monorepo)',
     files: ['web'],
-    scripts: ['verify:web', 'dev:web'],
+    scripts: ['verify:web', 'dev:web', 'e2e', 'e2e:setup'],
     // `deps` are always the API's. The web app keeps its own package.json,
     // so its dependencies are declared under `web` blocks and pruned there.
     web: { deps: ['next', 'react', 'react-dom'] }
@@ -246,28 +252,40 @@ export const PRESETS = {
     label: 'Recommended API — Postgres + JWT + Sentry + Docker',
     db: 'postgres',
     auth: 'jwt',
-    modules: { sentry: true, mcp: false, x402: false, web: false },
+    modules: { sentry: true, mcp: false, x402: false, jobs: false, web: false },
     docker: true
   },
   fullstack: {
     label: 'Full-stack — Postgres + JWT + Next.js front end + Sentry + Docker',
     db: 'postgres',
     auth: 'jwt',
-    modules: { sentry: true, mcp: false, x402: false, web: true },
+    modules: { sentry: true, mcp: false, x402: false, jobs: false, web: true },
     docker: true
   },
   lite: {
     label: 'Lite — SQLite + JWT, no external infrastructure',
     db: 'sqlite',
     auth: 'jwt',
-    modules: { sentry: false, mcp: false, x402: false, web: false },
+    modules: {
+      sentry: false,
+      mcp: false,
+      x402: false,
+      jobs: false,
+      web: false
+    },
     docker: false
   },
   minimal: {
     label: 'Minimal — no database, no auth, standalone',
     db: 'none',
     auth: 'none',
-    modules: { sentry: false, mcp: false, x402: false, web: false },
+    modules: {
+      sentry: false,
+      mcp: false,
+      x402: false,
+      jobs: false,
+      web: false
+    },
     docker: false
   }
 };

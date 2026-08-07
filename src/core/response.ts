@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { ERROR_CODES, ErrorCode } from './errors';
-import { logger } from '../utils/logger';
+import { logger, logPath } from '../utils/logger';
 import { config } from '../config';
 
 export interface ValidationIssue {
@@ -145,7 +145,7 @@ export class ResponseHandler {
       errorId: code.id,
       callId: this.req.callId,
       method: this.req.method,
-      endpoint: this.req.originalUrl,
+      endpoint: logPath(this.req),
       ...extra
     };
 

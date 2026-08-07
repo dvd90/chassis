@@ -221,16 +221,29 @@ const RESIDUE = {
 };
 
 /**
- * Two docs are exempt from the residue scan, for the same reason .md is exempt
- * from marker pruning: their subject *is* the module system, so naming a module
- * the reader did not scaffold is the job rather than a leak. Everything else,
- * prose included, is held to the rule.
+ * Files exempt from the residue scan, because naming a module the reader did
+ * not scaffold is their job rather than a leak. Everything else, prose
+ * included, is held to the rule.
+ *
+ *  - the two docs whose subject *is* the module system — the same reason .md
+ *    is exempt from marker pruning in the first place;
+ *  - the logger and the request-logging test, whose redaction denylist has to
+ *    spell out the credential key names it strips. `password` and `token`
+ *    appear there in every project, including ones with no password and no
+ *    tokens, and that is correct: a denylist that only covers the modules you
+ *    kept is a denylist with holes.
  */
-const SCAFFOLDER_DOCS = ['docs/modules.md', 'docs/reference/cli.md'];
+const RESIDUE_EXEMPT = [
+  'docs/modules.md',
+  'docs/reference/cli.md',
+  'src/utils/logger.ts',
+  'src/utils/logger.test.ts',
+  'src/__tests__/logging.test.ts'
+];
 
-function describesTheScaffolder(dir, file) {
+function residueExempt(dir, file) {
   const rel = path.relative(dir, file).split(path.sep).join('/');
-  return SCAFFOLDER_DOCS.includes(rel);
+  return RESIDUE_EXEMPT.some((p) => rel === p || rel.endsWith('/' + p));
 }
 
 function assertNoModuleResidue(dir, declined) {
@@ -241,7 +254,7 @@ function assertNoModuleResidue(dir, declined) {
     const files = rule.everywhere ? walkAll(dir) : walkText(dir, []);
 
     for (const file of files) {
-      if (describesTheScaffolder(dir, file)) continue;
+      if (residueExempt(dir, file)) continue;
       const lines = fs.readFileSync(file, 'utf8').split('\n');
       for (const [index, line] of lines.entries()) {
         if (!rule.pattern.test(line)) continue;
@@ -409,6 +422,23 @@ function assertScaffold(dir, selected) {
       assert.ok(
         !fs.existsSync(path.join(dir, MONOREPO.webDir, gone)),
         `template-only file shipped: ${gone}`
+      );
+    }
+
+    // The browser tests moved with the app, and the root drives them by the
+    // same two script names the single-package layout uses — that is what
+    // lets one CI job serve both layouts.
+    for (const kept of ['playwright.config.ts', 'e2e']) {
+      assert.ok(
+        fs.existsSync(path.join(dir, MONOREPO.webDir, kept)),
+        `browser tests missing from ${MONOREPO.webDir}: ${kept}`
+      );
+    }
+    for (const script of ['e2e', 'e2e:setup']) {
+      assert.match(
+        rootPkg.scripts?.[script] ?? '',
+        new RegExp(MONOREPO.webDir),
+        `root "${script}" does not target ${MONOREPO.webDir}`
       );
     }
   } else {
@@ -972,7 +1002,8 @@ const structural = [
   { label: 'toggle sentry', flags: ['--preset', 'minimal', '--sentry'], kept: ['sentry'] }, // prettier-ignore
   { label: 'toggle mcp', flags: ['--preset', 'minimal', '--mcp'], kept: ['mcp'] }, // prettier-ignore
   { label: 'toggle x402', flags: ['--preset', 'minimal', '--x402'], kept: ['x402'] }, // prettier-ignore
-  { label: 'every toggle at once', flags: ['--preset', 'minimal', '--db', 'postgres', '--auth', 'jwt', '--sentry', '--mcp', '--x402', '--web', '--docker'], kept: ['postgres', 'jwt', 'sentry', 'mcp', 'x402', 'web'] }, // prettier-ignore
+  { label: 'toggle jobs', flags: ['--preset', 'minimal', '--jobs'], kept: ['jobs'] }, // prettier-ignore
+  { label: 'every toggle at once', flags: ['--preset', 'minimal', '--db', 'postgres', '--auth', 'jwt', '--sentry', '--mcp', '--x402', '--jobs', '--web', '--docker'], kept: ['postgres', 'jwt', 'sentry', 'mcp', 'x402', 'jobs', 'web'] }, // prettier-ignore
   { label: 'preset lite', flags: ['--preset', 'lite'], kept: ['sqlite', 'jwt'] }, // prettier-ignore
   { label: 'preset api', flags: ['--preset', 'api'], kept: ['postgres', 'jwt', 'sentry'] }, // prettier-ignore
   { label: 'preset fullstack', flags: ['--preset', 'fullstack'], kept: ['postgres', 'jwt', 'sentry', 'web'] }, // prettier-ignore
@@ -1186,6 +1217,14 @@ const build = [
   { label: 'api (postgres/jwt/sentry)', flags: ['--preset', 'api'], kept: ['postgres', 'jwt', 'sentry'], db: 'postgres' }, // prettier-ignore
   { label: 'mongo/clerk/sentry/mcp/x402', flags: ['--preset', 'minimal', '--db', 'mongo', '--auth', 'clerk', '--sentry', '--mcp', '--x402', '--docker'], kept: ['mongo', 'clerk', 'sentry', 'mcp', 'x402'], db: 'mongo' }, // prettier-ignore
   { label: 'postgres/auth0/mcp', flags: ['--preset', 'minimal', '--db', 'postgres', '--auth', 'auth0', '--mcp'], kept: ['postgres', 'auth0', 'mcp'], db: 'postgres' }, // prettier-ignore
+  // Jobs check in to Sentry across four marked lines around one try/catch.
+  // Keeping jobs while declining sentry is what proves they prune together —
+  // `noUnusedLocals` turns a half-pruned check-in into a build break.
+  { label: 'jobs without sentry', flags: ['--preset', 'minimal', '--jobs'], kept: ['jobs'], db: null }, // prettier-ignore
+  // The jobs entrypoint test spawns the entrypoint and resolves it from the
+  // package root, so the monorepo — where that root is apps/api, not the repo
+  // — is the layout where a wrong assumption about cwd would surface.
+  { label: 'jobs + web (monorepo)', flags: ['--preset', 'minimal', '--jobs', '--web'], kept: ['jobs', 'web'], db: null }, // prettier-ignore
   // Local JWT with no database at all: every db import in the user-store
   // seam prunes away, which is where an unused-import build break hides.
   { label: 'jwt, no database', flags: ['--preset', 'minimal', '--auth', 'jwt'], kept: ['jwt'], db: null }, // prettier-ignore

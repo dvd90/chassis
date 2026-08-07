@@ -33,6 +33,7 @@ exception).
 | `sentry`   | `SENTRY_DSN`                      | `Sentry.init` at boot, `captureException` in the error handler         |
 | `x402`     | `X402_PAY_TO`                     | registers the payment gate used by `@paidRoute`                        |
 | `mcp`      | _(none — separate stdio process)_ | `npm run mcp` server exposing the API as agent tools                   |
+| `jobs`     | _(none — a second entrypoint)_    | `npm run jobs` cron + long-running harness, Sentry Crons check-ins     |
 | `web`      | _(none — a separate app)_         | Next.js front end; restructures the project into a workspaces monorepo |
 
 ## Choice groups

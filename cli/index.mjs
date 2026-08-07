@@ -563,6 +563,10 @@ function restructureToMonorepo(webDir) {
           build: 'npm run build --workspaces --if-present',
           verify: 'npm run verify --workspaces --if-present',
           gen: `npm run gen -w ${MONOREPO.apiDir} --`,
+          // Same two names as the single-package layout, so the CI job that
+          // runs them does not need to know which layout it is in.
+          e2e: `npm run e2e -w ${MONOREPO.webDir}`,
+          'e2e:setup': `npm exec -w ${MONOREPO.webDir} -- playwright install --with-deps chromium`,
           format: 'prettier --write .',
           prepare: 'husky || true'
         },

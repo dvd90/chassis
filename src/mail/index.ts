@@ -43,7 +43,23 @@ export function setMailTransport(transport?: MailTransport): void {
   bound = transport;
 }
 
+let warned = false;
+
 export function mailTransport(): MailTransport {
   if (bound) return bound;
-  return config.mail.smtpUrl ? smtpTransport(config.mail.smtpUrl) : consoleTransport;
+  if (config.mail.smtpUrl) return smtpTransport(config.mail.smtpUrl);
+
+  // The console transport prints the link and the code — that is the whole
+  // point of it, and why the logger's redaction deliberately leaves the mail
+  // body alone. In production it means live sign-in credentials land in
+  // stdout, so say so once rather than failing a boot that may be deliberate.
+  if (config.env === 'production' && !warned) {
+    warned = true;
+    logger.warn(
+      'No SMTP_URL and no bound transport: sign-in links and codes are being ' +
+        'written to the log. Set SMTP_URL or call setMailTransport().'
+    );
+  }
+
+  return consoleTransport;
 }

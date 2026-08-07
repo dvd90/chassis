@@ -31,6 +31,7 @@ const envSchema = z.object({
   SMTP_URL: z.string().optional(), // chassis:magic
   CLERK_SECRET_KEY: z.string().optional(), // chassis:clerk
   SENTRY_DSN: z.string().optional(), // chassis:sentry
+  SENTRY_RELEASE: z.string().optional(), // chassis:sentry
   X402_PAY_TO: z.string().optional(), // chassis:x402
   X402_NETWORK: z.string().default('base-sepolia'), // chassis:x402
   MCP_API_URL: z.string().default('http://localhost:8000') // chassis:mcp
@@ -69,7 +70,7 @@ export const config = {
   magicReturnTo: { origins: env.MAGIC_RETURN_TO_ORIGINS }, // chassis:magic
   mail: { from: env.MAGIC_FROM, smtpUrl: env.SMTP_URL }, // chassis:magic
   clerk: { secretKey: env.CLERK_SECRET_KEY }, // chassis:clerk
-  sentry: { dsn: env.SENTRY_DSN }, // chassis:sentry
+  sentry: { dsn: env.SENTRY_DSN, release: env.SENTRY_RELEASE }, // chassis:sentry
   x402: { payTo: env.X402_PAY_TO, network: env.X402_NETWORK }, // chassis:x402
   mcp: { apiUrl: env.MCP_API_URL }, // chassis:mcp
   /**
