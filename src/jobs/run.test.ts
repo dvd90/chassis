@@ -43,14 +43,22 @@ beforeAll(() => {
 
 afterAll(() => fs.rmSync(tmp, { recursive: true, force: true }));
 
-/** Write a fixture that registers `body`'s jobs, then boots the entrypoint. */
+/**
+ * Write a fixture that registers `body`'s jobs, then boots the entrypoint.
+ *
+ * CommonJS, deliberately. These files compile to CJS, so `run.ts` reads the
+ * registry out of the require cache; an ESM fixture would populate a second,
+ * separate copy of the module. Node 22+ unifies the two graphs and hides
+ * that, Node 20 does not — there the entrypoint saw an empty registry and
+ * every case here passed or failed for the wrong reason.
+ */
 function fixture(name: string, body: string): string {
-  const file = path.join(tmp, `${name}.mts`);
+  const file = path.join(tmp, `${name}.cjs`);
   fs.writeFileSync(
     file,
-    `import { jobs } from ${quoted('index.ts')};\n` +
+    `const { jobs } = require(${quoted('index.ts')});\n` +
       `${body}\n` +
-      `await import(${quoted('run.ts')});\n`
+      `require(${quoted('run.ts')});\n`
   );
   return file;
 }
@@ -84,7 +92,7 @@ describe('the jobs entrypoint', { timeout: 30_000 }, () => {
     const { status, output } = runSync(
       fixture(
         'oneshot',
-        `import fs from 'node:fs';
+        `const fs = require('node:fs');
          jobs.push({
            name: 'alpha',
            async run() { fs.appendFileSync(${JSON.stringify(marker)}, 'x'); }

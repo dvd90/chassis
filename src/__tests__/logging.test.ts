@@ -69,11 +69,7 @@ afterEach(() => {
 
 const logged = () => lines.join('\n');
 
-// A generous timeout, not because these are slow — they are milliseconds —
-// but because src/jobs/run.test.ts spawns real processes alongside them, and a
-// starved two-core runner should not turn that into a red build. A genuine
-// redaction failure fails on the assertion, long before this.
-describe('request logging', { timeout: 20_000 }, () => {
+describe('request logging', () => {
   it('never writes a token that travelled in the URL path', async () => {
     await request(app).get('/probe/LEAKY-TOKEN-1234').expect(200);
 
