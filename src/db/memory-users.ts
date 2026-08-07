@@ -1,46 +1,71 @@
 import { config } from '../config';
-import { hashPassword } from '../utils/password';
 import type { AuthUser, StoredUser, UserStore } from './users';
 
 /**
- * In-memory user store — the fallback when no database is configured.
+ * In-memory identity store — the fallback when no database is configured.
  *
  * ponytail: process-local and non-persistent by design. It exists so that
- * `--auth jwt --db none` still boots and logs in during development; pick a
- * database (the store then follows it automatically, see ./users.ts) before
- * putting local-JWT auth in front of real users.
+ * local auth still boots and signs in during development; pick a database
+ * (the store then follows it automatically, see ./users.ts) before putting
+ * this in front of real users.
  *
- * Set AUTH_DEV_EMAIL / AUTH_DEV_PASSWORD to seed a single account at boot.
+ * Set AUTH_DEV_EMAIL to seed a single identity at boot.
  */
 const users = new Map<string, StoredUser>();
 let nextId = 1;
-let seeding: Promise<void> | undefined;
+let seeded = false;
 
-function seed(): Promise<void> {
-  seeding ??= (async () => {
-    const { email, password } = config.authDev;
-    if (!email || !password) return;
-    const key = email.toLowerCase();
-    users.set(key, {
-      id: String(nextId++),
-      email: key,
-      passwordHash: await hashPassword(password)
-    });
-  })();
-  return seeding;
+function insert(email: string): StoredUser {
+  const key = email.toLowerCase();
+  const user: StoredUser = { id: String(nextId++), email: key, verifiedAt: null };
+  users.set(key, user);
+  return user;
+}
+
+function seed(): void {
+  if (seeded) return;
+  seeded = true;
+  if (config.authDev.email) insert(config.authDev.email);
 }
 
 export const memoryUsers: UserStore = {
   async findByEmail(email: string): Promise<StoredUser | null> {
-    await seed();
+    seed();
     return users.get(email.toLowerCase()) ?? null;
   },
 
-  async create(email: string, passwordHash: string): Promise<AuthUser> {
-    await seed();
-    const key = email.toLowerCase();
-    const user: StoredUser = { id: String(nextId++), email: key, passwordHash };
-    users.set(key, user);
+  async findById(id: string): Promise<StoredUser | null> {
+    seed();
+    for (const user of users.values()) {
+      if (user.id === id) return user;
+    }
+    return null;
+  },
+
+  async create(email: string): Promise<AuthUser> {
+    seed();
+    const user = insert(email);
     return { id: user.id, email: user.email };
+  },
+
+  async markVerified(id: string, at: Date): Promise<void> {
+    seed();
+    for (const user of users.values()) {
+      if (user.id === id) user.verifiedAt = at.toISOString();
+    }
   }
 };
+
+/** Test-only: forget every seeded and created identity. */
+export function resetMemoryUsers(): void {
+  users.clear();
+  nextId = 1;
+  seeded = false;
+}
+
+/** The dev identity's id, if AUTH_DEV_EMAIL seeded one. */
+export function devUserId(): string | undefined {
+  seed();
+  const email = config.authDev.email?.toLowerCase();
+  return email ? users.get(email)?.id : undefined;
+}

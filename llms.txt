@@ -27,8 +27,9 @@
 - Config: only `src/config/index.ts` reads `process.env`; it's a zod
   schema and the app exits on invalid config.
 - Never edit `src/core/**` for feature work.
-- Local JWT ships `/auth/register` and `/auth/login`; users live in the
-  configured database (`src/db/users.ts`), or in memory when there is none.
+- Local auth ships its own sign-in endpoints plus `/auth/refresh`,
+  `/auth/logout` and `/auth/revoke-all`; identities live in the configured
+  database (`src/db/users.ts`), or in memory when there is none.
 - Front end (only when `web/` or `apps/web/` exists): pages are server
   components, API calls go through `apiFetch` in `lib/api.ts`, and auth is
   imported from `auth/active.ts` — never from a provider directly.

@@ -11,7 +11,7 @@
 | [Getting started](getting-started.md)        | Step-by-step: scaffold, run, add your first endpoint, test, build |
 | [Building an API](guides/building-an-api.md) | A complete CRUD resource: model, validation, errors, tests        |
 | [Database](guides/database.md)               | Choosing Mongo/Postgres/SQLite, the ORM, migrations, DB-aware gen |
-| [Authentication](guides/authentication.md)   | Auth0, local JWT (register/login), Clerk, on the API and the web  |
+| [Authentication](guides/authentication.md)   | Auth0, Clerk, local auth, and the guides for each sign-in method  |
 | [Web front end](guides/web.md)               | The Next.js app, the monorepo layout, swapping auth providers     |
 | [MCP server](guides/mcp.md)                  | Exposing the API to AI agents as MCP tools                        |
 | [Payments (x402)](guides/payments-x402.md)   | Payment-gating routes with `@paidRoute` and the x402 protocol     |

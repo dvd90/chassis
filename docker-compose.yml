@@ -8,6 +8,7 @@ services:
       PORT: 8000
       MONGODB_URI: mongodb://mongo:27017/chassis # chassis:mongo
       DATABASE_URL: postgres://postgres:postgres@db:5432/chassis # chassis:postgres
+      SMTP_URL: smtp://mailpit:1025 # chassis:magic
     depends_on: # chassis:mongo
       - mongo # chassis:mongo
 
@@ -28,6 +29,16 @@ services:
       POSTGRES_DB: chassis # chassis:postgres
     ports: # chassis:postgres
       - '5432:5432' # chassis:postgres
+
+  # Catches every email the app sends; read them at http://localhost:8025.
+  # ponytail: no named volume on purpose — the top-level `volumes:` block
+  # below belongs entirely to mongo, and a second owner would stop it
+  # pruning cleanly. Nothing here is worth surviving a restart anyway.
+  mailpit: # chassis:magic
+    image: axllent/mailpit:latest # chassis:magic
+    ports: # chassis:magic
+      - '1025:1025' # chassis:magic
+      - '8025:8025' # chassis:magic
 
 volumes: # chassis:mongo
   mongo-data: # chassis:mongo

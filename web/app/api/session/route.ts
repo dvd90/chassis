@@ -1,45 +1,50 @@
 import { NextResponse } from 'next/server';
-import { TOKEN_COOKIE } from '@/auth/providers/jwt.shared';
-
-const API_URL = process.env.API_URL ?? 'http://localhost:8000';
-const ONE_HOUR = 60 * 60;
+import {
+  ACCESS_MAX_AGE,
+  REFRESH_COOKIE,
+  REFRESH_MAX_AGE,
+  TOKEN_COOKIE,
+  cookieOptions
+} from '@/auth/providers/jwt.shared';
 
 /**
- * The local-JWT session endpoint (this file ships only with `--auth jwt`).
+ * The session boundary — the one place in the stack that sets cookies, which
+ * is what lets the API stay a pure bearer-token service.
  *
- * It exists so the browser never holds the token in JavaScript: credentials
- * are exchanged at the API's POST /auth/login here on the server, and the
- * token comes back to the browser only as an httpOnly cookie.
+ * Signing *in* is per-method and lives in the sibling routes, because which
+ * of those exist depends on how the project was scaffolded. This file owns
+ * what they have in common: turning an API auth response into httpOnly
+ * cookies, and signing out.
  */
-export async function POST(request: Request) {
-  const credentials = await request.json().catch(() => null);
-  if (!credentials) {
-    return NextResponse.json({ message: 'Invalid request' }, { status: 400 });
-  }
-
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(credentials)
-  });
-
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) return NextResponse.json(data, { status: res.status });
-
-  const response = NextResponse.json({ user: data.user });
-  response.cookies.set(TOKEN_COOKIE, data.token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-    // Matches TOKEN_TTL in the API's Auth controller.
-    maxAge: ONE_HOUR
-  });
-  return response;
-}
-
 export async function DELETE() {
   const response = NextResponse.json({ ok: true });
   response.cookies.delete(TOKEN_COOKIE);
+  response.cookies.delete(REFRESH_COOKIE);
+  return response;
+}
+
+/** Store a session from any API auth response. */
+export function withSession(
+  data: { user?: unknown; accessToken?: string; refreshToken?: string },
+  extra: Record<string, unknown> = {}
+) {
+  const response = NextResponse.json({ user: data.user, ...extra });
+
+  if (data.accessToken) {
+    response.cookies.set(
+      TOKEN_COOKIE,
+      data.accessToken,
+      cookieOptions(ACCESS_MAX_AGE)
+    );
+  }
+
+  if (data.refreshToken) {
+    response.cookies.set(
+      REFRESH_COOKIE,
+      data.refreshToken,
+      cookieOptions(REFRESH_MAX_AGE)
+    );
+  }
+
   return response;
 }

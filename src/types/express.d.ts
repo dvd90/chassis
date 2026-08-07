@@ -7,6 +7,8 @@ declare global {
       callId: string;
       /** Response helper attached by `ResponseHandler.middleware`. */
       resHandler: ResponseHandler;
+      /** Verified `sub` claim, attached by the local-JWT auth provider. */
+      identityId?: string;
     }
   }
 }

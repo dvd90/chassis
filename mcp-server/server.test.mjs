@@ -75,7 +75,14 @@ test('list_chassis_options mirrors the CLI catalog', async () => {
   // Imported from create-chassis, so this fails if the catalog moves.
   assert.ok(options.presets.fullstack, 'no fullstack preset');
   assert.deepEqual(options.db, ['none', 'mongo', 'postgres', 'sqlite']);
-  assert.deepEqual(options.auth, ['none', 'auth0', 'jwt', 'clerk']);
+  assert.deepEqual(options.auth, [
+    'none',
+    'auth0',
+    'jwt',
+    'magic-only',
+    'password+magic',
+    'clerk'
+  ]);
   assert.ok(options.addons.web, 'no web add-on');
   assert.equal(options.presets.fullstack.db, 'postgres');
   assert.ok(options.presets.fullstack.modules.includes('web'));
@@ -96,7 +103,7 @@ test('create_chassis_project scaffolds a single-package project', async () => {
   assert.equal(result.apiRoot, '.');
   assert.ok(result.layout.includes('src'));
   assert.ok(!result.layout.includes('apps'));
-  assert.ok(fs.existsSync(path.join(directory, 'src/controllers/Auth.controller.ts'))); // prettier-ignore
+  assert.ok(fs.existsSync(path.join(directory, 'src/controllers/Password.controller.ts'))); // prettier-ignore
   assert.ok(fs.existsSync(result.conventions), 'AGENTS.md not reported');
   assert.match(result.writeCodeLikeThis, /resHandler/);
   assert.ok(result.nextSteps.some((s) => s.includes('npm install')));

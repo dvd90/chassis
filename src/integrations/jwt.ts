@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { setAuthProvider } from '../core/auth';
 import { config } from '../config';
+import { now } from '../utils/clock';
 import { logger } from '../utils/logger';
 
 // ponytail: jose ships ESM only, so a CJS build can't statically import it.
@@ -9,11 +10,11 @@ import { logger } from '../utils/logger';
 const jose = import('jose');
 
 /**
- * Enabled when JWT_SECRET is set. Verifies a `Bearer <token>` (HS256).
- * Issuing tokens is app-specific — sign them with the same secret via
- * jose's SignJWT (see docs/guides/authentication.md). Read the verified
- * claims in a handler with `const { jwtVerify } = await import('jose')` if
- * you need them.
+ * Enabled when JWT_SECRET is set. Verifies a `Bearer <token>` (HS256) and
+ * attaches the verified subject as `req.identityId`, which is what
+ * `/auth/revoke-all` and any handler needing "who is this" reads.
+ *
+ * Tokens are minted by src/services/session.ts with the same secret.
  */
 export function initJwt(): void {
   const secret = new TextEncoder().encode(config.jwt.secret);
@@ -26,7 +27,16 @@ export function initJwt(): void {
 
       try {
         const { jwtVerify } = await jose;
-        await jwtVerify(token, secret);
+        const { payload } = await jwtVerify(token, secret, {
+          // Pin the algorithm: without this, jose would accept any algorithm
+          // the token's own header asks for.
+          algorithms: ['HS256'],
+          // Expiry is decided by the injected clock, so tests can age a token
+          // without touching the system clock.
+          currentDate: now()
+        });
+
+        req.identityId = payload.sub;
         next();
       } catch {
         return req.resHandler.wrongToken('Invalid or expired token');
@@ -34,5 +44,5 @@ export function initJwt(): void {
     }
   ]);
 
-  logger.info('✅ Local JWT authentication enabled');
+  logger.info('✅ Local authentication enabled');
 }

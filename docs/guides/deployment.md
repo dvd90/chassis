@@ -71,6 +71,32 @@ Any platform that runs a Node server or a Dockerfile works:
 - Set `PORT` if the platform injects its own (Chassis reads it)
 - Set `NODE_ENV=production`
 
+## Readable stack traces (Sentry)
+
+`dist/` is compiled JavaScript, so a Sentry trace points at the build, not at
+your source — unless the source maps are uploaded under the same release the
+running process reports.
+
+The CI workflow does the upload after `npm run build`. It needs three things
+set on the repository, and skips itself silently until they exist:
+
+| Where              | Name                | Value                               |
+| ------------------ | ------------------- | ----------------------------------- |
+| Actions **secret** | `SENTRY_AUTH_TOKEN` | a token with project:releases scope |
+| Actions **var**    | `SENTRY_ORG`        | your Sentry org slug                |
+| Actions **var**    | `SENTRY_PROJECT`    | your Sentry project slug            |
+
+Then set `SENTRY_RELEASE` on the running service to the same commit SHA the
+upload used. Both sides have to agree — a release mismatch is the usual reason
+maps are uploaded and traces stay minified anyway.
+
+## Running jobs
+
+The `jobs` module adds a second entrypoint off the same build: `npm run
+start:jobs` (`node dist/jobs/run.js`). Deploy it as its own service from the
+same image, and run one replica unless every job is idempotent. See
+[Background jobs](jobs.md).
+
 ## Production checklist
 
 - [ ] `NODE_ENV=production` — enables JSON logs, hides stack traces from
@@ -80,7 +106,9 @@ Any platform that runs a Node server or a Dockerfile works:
 - [ ] Secrets (`MONGODB_URI`, `SENTRY_DSN`, …) come from the platform's
       secret store, not a committed file — `.env` is gitignored, keep it
       that way
-- [ ] `SENTRY_DSN` set if you want error reporting (recommended)
+- [ ] `SENTRY_DSN` set if you want error reporting (recommended), and
+      `SENTRY_RELEASE` set to the deployed commit SHA so traces resolve to
+      source
 - [ ] Point probes at `/healthz` and `/readyz`
 - [ ] CI is green (`npm run verify` — the included GitHub Actions
       workflow runs it on Node 20 and 22)

@@ -8,7 +8,9 @@ export interface ErrorCode {
 export const ERROR_CODES = {
   OK: { id: 0, statusCode: 200, statusReason: 'OK' },
   CREATED: { id: 0, statusCode: 201, statusReason: 'Created' },
+  ACCEPTED: { id: 0, statusCode: 202, statusReason: 'Accepted' },
   NO_CONTENT: { id: 0, statusCode: 204, statusReason: 'No Content' },
+  SEE_OTHER: { id: 0, statusCode: 303, statusReason: 'See Other' },
   BAD_REQUEST: { id: 1000, statusCode: 400, statusReason: 'Bad Request' },
   VALIDATION: { id: 1001, statusCode: 400, statusReason: 'Validation Failed' },
   WRONG_TOKEN: {
@@ -19,6 +21,11 @@ export const ERROR_CODES = {
   FORBIDDEN: { id: 1003, statusCode: 403, statusReason: 'Forbidden' },
   NOT_FOUND: { id: 1004, statusCode: 404, statusReason: 'Not Found' },
   CONFLICT: { id: 1005, statusCode: 409, statusReason: 'Conflict' },
+  TOO_MANY_REQUESTS: {
+    id: 1006,
+    statusCode: 429,
+    statusReason: 'Too Many Requests'
+  },
   SERVER_ERROR: {
     id: 1500,
     statusCode: 500,

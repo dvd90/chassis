@@ -52,6 +52,27 @@ Two intentional paths:
   reports to Sentry when enabled, and returns a sanitized 500 (stack
   traces are only included outside production).
 
+## Logging
+
+Every log line passes through a redaction format before any transport sees
+it. Metadata keys that name a credential — auth headers, cookies, tokens of
+any spelling, secrets, sign-in codes and email addresses — come out as
+`[redacted]`, two levels deep. The exact list is at the top of
+`src/utils/logger.ts`.
+
+URLs are logged as the **route pattern** the request matched
+(`/auth/magic/:token`), never the concrete path. That matters because tokens
+travel in the path, so `originalUrl` in a log is a live credential at rest.
+The 404 handler follows the same rule, in its response body as well as its
+log.
+
+Two deliberate gaps, both marked in `src/utils/logger.ts`:
+
+- the log **message** is never redacted, only the metadata — that is what
+  keeps the console mail transport able to print a sign-in link in dev;
+- an unmatched path has no pattern to fall back to, so a 404 strips the
+  query but keeps the path.
+
 ## Why an app factory?
 
 `createApp()` performs no I/O — integrations boot separately in

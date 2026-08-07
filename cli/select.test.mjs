@@ -12,7 +12,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { MODULES, GROUPS, PRESETS } from './modules.mjs';
+import { MODULES, GROUPS, IMPLIED, PRESETS } from './modules.mjs';
 import { presetChoices, resolveSelection } from './select.mjs';
 
 /** A prompter that answers from a script and records what it was asked. */
@@ -116,6 +116,36 @@ test('Custom walks database, auth, every module, then Docker', async () => {
       Object.keys(GROUPS.auth.variants)
     ]
   );
+});
+
+test('Custom never prompts for an implied module', async () => {
+  // Implied modules live outside MODULES precisely so that the interactive
+  // path cannot offer them: they are consequences of an auth choice, not
+  // choices themselves. Putting one in MODULES would ask the user whether
+  // they want a session layer they already implicitly asked for.
+  const { prompts, asked } = scripted('custom', 'none', 'none');
+  const sel = await resolveSelection({ prompts });
+
+  for (const key of Object.keys(IMPLIED)) {
+    assert.ok(!(key in sel.modules), `"${key}" leaked into the module toggles`);
+    assert.ok(
+      !asked.some((a) => a.prompt.includes(IMPLIED[key].label)),
+      `Custom asked about the implied module "${key}"`
+    );
+  }
+});
+
+test('every local auth variant survives selection and implies a session', async () => {
+  for (const variant of ['jwt', 'magic-only', 'password+magic']) {
+    const { prompts } = scripted();
+    const sel = await resolveSelection({ prompts, skipPrompts: true, auth: variant }); // prettier-ignore
+
+    assert.equal(sel.auth, variant, `--auth ${variant} was not honoured`);
+    assert.ok(
+      GROUPS.auth.variants[variant].implies?.includes('session'),
+      `${variant} must imply the session layer, or it ships no way to sign in`
+    );
+  }
 });
 
 test('Custom asks about every module in the catalog', async () => {

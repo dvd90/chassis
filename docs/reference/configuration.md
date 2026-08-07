@@ -20,9 +20,10 @@ in production, inject real environment variables instead.
 | `SQLITE_PATH`       | string — optional                                               | **Enables the SQLite module** (Drizzle). File path, or `:memory:`                        |
 | `AUTH0_DOMAIN`      | string — optional                                               | **Enables Auth0** (with `AUTH0_AUDIENCE`). Tenant domain, e.g. `my-tenant.eu.auth0.com`  |
 | `AUTH0_AUDIENCE`    | string — optional                                               | **Enables Auth0** (with `AUTH0_DOMAIN`). The API identifier from the Auth0 dashboard     |
-| `JWT_SECRET`        | string — optional                                               | **Enables local JWT auth** (jose). Signs `/auth/login` tokens and verifies Bearer tokens |
-| `AUTH_DEV_EMAIL`    | string — optional                                               | Seeds one account in the in-memory user store (only used when no database is configured) |
-| `AUTH_DEV_PASSWORD` | string — optional                                               | Password for `AUTH_DEV_EMAIL`. Development only — the store is not persistent            |
+| `JWT_SECRET`        | string — optional                                               | **Enables local auth.** Signs access tokens and verifies Bearer tokens                   |
+| `SESSION_IDLE`      | duration — default `30d`                                        | Sliding refresh-token lifetime — see [Sessions](../guides/sessions.md)                   |
+| `SESSION_ABSOLUTE`  | duration — default `90d`                                        | Hard cap on a session's age, measured from sign-in and never renewed                     |
+| `AUTH_DEV_EMAIL`    | string — optional                                               | Seeds one identity in the in-memory store (only used when no database is configured)     |
 | `CLERK_SECRET_KEY`  | string — optional                                               | **Enables Clerk auth.** Clerk secret key                                                 |
 | `SENTRY_DSN`        | string — optional                                               | **Enables Sentry** error reporting                                                       |
 | `X402_PAY_TO`       | string — optional                                               | **Enables x402 payments** for `@paidRoute`. Wallet address receiving payments            |
@@ -40,7 +41,7 @@ features: {
   postgres: Boolean(env.DATABASE_URL),
   sqlite:   Boolean(env.SQLITE_PATH),
   auth0:    Boolean(env.AUTH0_DOMAIN && env.AUTH0_AUDIENCE),
-  jwt:      Boolean(env.JWT_SECRET),
+  session:  Boolean(env.JWT_SECRET),
   clerk:    Boolean(env.CLERK_SECRET_KEY),
   sentry:   Boolean(env.SENTRY_DSN),
   x402:     Boolean(env.X402_PAY_TO)

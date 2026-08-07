@@ -1,5 +1,6 @@
 import { Application, NextFunction, Request, Response } from 'express';
 import { AppError } from './errors';
+import { logPath } from '../utils/logger';
 import { config } from '../config'; // chassis:sentry
 import { captureException } from '../integrations/sentry'; // chassis:sentry
 
@@ -10,7 +11,12 @@ import { captureException } from '../integrations/sentry'; // chassis:sentry
  */
 export function registerErrorHandlers(app: Application): void {
   app.use((req: Request, _res: Response) => {
-    req.resHandler.notFound(`Cannot ${req.method} ${req.originalUrl}`);
+    // `logPath`, not `originalUrl`: an unmatched request is exactly the one
+    // whose URL may still hold a credential — a mistyped or already-rotated
+    // sign-in link — and this message reaches both the log and the response
+    // body. Echoing the query back is how a token ends up in someone's
+    // browser history and an error-tracking dashboard at the same time.
+    req.resHandler.notFound(`Cannot ${req.method} ${logPath(req)}`);
   });
 
   app.use((err: unknown, req: Request, _res: Response, _next: NextFunction) => {

@@ -171,7 +171,7 @@ forgotten twice.
   `// chassis:<name>`, or the CLI's pruning breaks.
 - Two marker rules the test suite enforces, both learned the hard way:
   - The marker must be **last on the line**. A marker after an opening
-    brace (`sqliteTable('users', { // chassis:jwt`) gets moved onto its own
+    brace (`sqliteTable('users', { // chassis:session`) gets moved onto its own
     line by Prettier, and pruning then deletes the body but keeps the
     declaration. Put the construct in its own file and mark the import.
   - A module name must not appear as `chassis:<name>` anywhere else in the
@@ -238,7 +238,7 @@ nothing else. The work is already in the template:
   `node`/`node10`. Output stays CommonJS (no `"type": "module"`), so `dist/`,
   `npm start` and the Dockerfile are unchanged.
 - `jose` is imported dynamically in `src/integrations/jwt.ts` and
-  `src/controllers/Auth.controller.ts`. It publishes no `require` condition,
+  `src/services/session.ts`. It publishes no `require` condition,
   so a static import from a CommonJS file is a `TS1479` error under `node16`.
   `node16` also emits a real `import()` rather than downleveling it to
   `require`, which is what makes an ESM-only package work in the CJS build.

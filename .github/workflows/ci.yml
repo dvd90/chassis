@@ -4,6 +4,9 @@ on:
   push:
     branches: [master, main]
   pull_request:
+  # A manual trigger, so a run can be started without an empty commit — after
+  # a GitHub Actions outage swallows the original event, for instance.
+  workflow_dispatch:
 
 jobs:
   verify:
@@ -36,6 +39,20 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Without this, every production stack trace is minified `dist/` output. # chassis:sentry
+      # `npx --yes` on purpose: nothing but CI ever runs @sentry/cli, so it is # chassis:sentry
+      # not worth a devDependency. Skipped entirely until the secret exists, # chassis:sentry
+      # and pinned to one matrix leg so the release is not uploaded twice. # chassis:sentry
+      - name: Upload source maps to Sentry # chassis:sentry
+        if: ${{ matrix.node-version == 20 && github.ref == 'refs/heads/master' && env.SENTRY_AUTH_TOKEN != '' }} # chassis:sentry
+        env: # chassis:sentry
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }} # chassis:sentry
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }} # chassis:sentry
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }} # chassis:sentry
+        run: | # chassis:sentry
+          npx --yes @sentry/cli sourcemaps inject dist # chassis:sentry
+          npx --yes @sentry/cli sourcemaps upload dist --release "$GITHUB_SHA" # chassis:sentry
+
       # Seconds, and it catches a mistyped marker or a stale module catalog
       # entry — both of which fail silently. Worth running here for fast
       # feedback rather than only in the slow scaffold job below.
@@ -51,6 +68,64 @@ jobs:
       # change to the module catalog breaks it here. # chassis:template
       - name: chassis-mcp # chassis:template
         run: npm ci --prefix mcp-server && npm test --prefix mcp-server # chassis:template
+
+  mail-e2e: # chassis:magic
+    # The magic-link flow against a real SMTP server, because the capture # chassis:magic
+    # transport in the unit tests cannot prove an email actually sends. # chassis:magic
+    # Skipped by `npm run verify`, which must stay runnable with no Docker. # chassis:magic
+    runs-on: ubuntu-latest # chassis:magic
+    timeout-minutes: 10 # chassis:magic
+    # chassis:magic
+    services: # chassis:magic
+      mailpit: # chassis:magic
+        image: axllent/mailpit:latest # chassis:magic
+        ports: # chassis:magic
+          - 1025:1025 # chassis:magic
+          - 8025:8025 # chassis:magic
+    # chassis:magic
+    steps: # chassis:magic
+      - uses: actions/checkout@v4 # chassis:magic
+      # chassis:magic
+      - uses: actions/setup-node@v4 # chassis:magic
+        with: # chassis:magic
+          node-version: 20 # chassis:magic
+          cache: npm # chassis:magic
+      # chassis:magic
+      - name: Install dependencies # chassis:magic
+        run: npm ci # chassis:magic
+      # chassis:magic
+      - name: Magic-link end to end # chassis:magic
+        run: MAILPIT=1 npx vitest run src/__tests__/magic.e2e.test.ts # chassis:magic
+        env: # chassis:magic
+          SMTP_URL: smtp://localhost:1025 # chassis:magic
+          MAILPIT_API: http://localhost:8025 # chassis:magic
+
+  web-e2e: # chassis:web
+    # Playwright against a production `next build`. Its own job because it # chassis:web
+    # needs a browser download, and `npm run verify` must stay runnable on # chassis:web
+    # a clean machine with nothing installed. # chassis:web
+    runs-on: ubuntu-latest # chassis:web
+    timeout-minutes: 20 # chassis:web
+    # chassis:web
+    steps: # chassis:web
+      - uses: actions/checkout@v4 # chassis:web
+      # chassis:web
+      - uses: actions/setup-node@v4 # chassis:web
+        with: # chassis:web
+          node-version: 20 # chassis:web
+          cache: npm # chassis:web
+      # chassis:web
+      - name: Install dependencies # chassis:web
+        run: npm ci # chassis:web
+      # chassis:web
+      - name: Install web dependencies # chassis:template
+        run: npm ci --prefix web # chassis:template
+      # chassis:web
+      - name: Install Chromium # chassis:web
+        run: npm run e2e:setup # chassis:web
+      # chassis:web
+      - name: Browser smoke test # chassis:web
+        run: npm run e2e # chassis:web
 
   scaffold:
     # Scaffolds every project type and asserts each installs, verifies,

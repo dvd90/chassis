@@ -75,6 +75,27 @@ template-only and never ships.
 `/account` is guarded twice on purpose — middleware redirects the obvious
 cases, and the page re-checks. Middleware alone is never the guard.
 
+## Browser tests
+
+Playwright drives a production `next build`, so what it checks is the artifact
+that ships rather than the dev server.
+
+```bash
+npm run e2e:setup   # download Chromium — once
+npm run e2e
+```
+
+Both script names work in either layout, so CI does not have to know whether
+the project is a single package or a workspaces monorepo.
+
+They are deliberately **not** part of `npm run verify`: that has to stay
+runnable on a clean machine with no browser installed. CI runs them as their
+own job.
+
+`web/e2e/smoke.spec.ts` covers `/` and `/sign-in` structurally — no provider
+names, no copy — so it survives whichever auth you scaffolded with. Add specs
+next to it.
+
 ## Docker
 
 `docker-compose.yml` builds the API from `apps/api`. The Dockerfile falls

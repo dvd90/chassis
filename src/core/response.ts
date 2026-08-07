@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { ERROR_CODES, ErrorCode } from './errors';
-import { logger } from '../utils/logger';
+import { logger, logPath } from '../utils/logger';
 import { config } from '../config';
 
 export interface ValidationIssue {
@@ -36,9 +36,42 @@ export class ResponseHandler {
     return this.res.status(201).json(data ?? { success: true });
   }
 
+  /**
+   * The work was queued, not completed. Used where the response must not
+   * reveal what the server went on to do — a sign-in request whose reply is
+   * identical for a known and an unknown address, for instance.
+   */
+  accepted(data?: unknown): Response {
+    this.logMeta(ERROR_CODES.ACCEPTED);
+    return this.res.status(202).json(data ?? { success: true });
+  }
+
   noContent(): Response {
     this.logMeta(ERROR_CODES.NO_CONTENT);
     return this.res.status(204).send();
+  }
+
+  /**
+   * Send a self-contained HTML page.
+   *
+   * The API is otherwise JSON-only. This exists because some flows have to be
+   * completed by a person in a browser — an emailed sign-in link has to render
+   * a page and wait for a click, since mail security scanners prefetch links
+   * and would otherwise consume a single-use token.
+   */
+  html(markup: string): Response {
+    this.logMeta(ERROR_CODES.OK);
+    return this.res.status(200).type('html').send(markup);
+  }
+
+  /**
+   * Redirect after a successful POST, so that reloading the destination never
+   * re-submits it.
+   */
+  seeOther(url: string): Response {
+    const code = ERROR_CODES.SEE_OTHER;
+    this.logMeta(code);
+    return this.res.status(code.statusCode).location(url).send();
   }
 
   badRequest(message?: string): Response {
@@ -112,7 +145,7 @@ export class ResponseHandler {
       errorId: code.id,
       callId: this.req.callId,
       method: this.req.method,
-      endpoint: this.req.originalUrl,
+      endpoint: logPath(this.req),
       ...extra
     };
 
